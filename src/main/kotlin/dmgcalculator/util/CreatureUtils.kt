@@ -3,11 +3,12 @@ package dmgcalculator.util
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.monsters.AbstractMonster
-import com.megacrit.cardcrawl.monsters.AbstractMonster.Intent
+import com.megacrit.cardcrawl.monsters.MonsterGroup
 import com.megacrit.cardcrawl.powers.CombustPower
 import com.megacrit.cardcrawl.powers.TheBombPower
 import com.megacrit.cardcrawl.powers.watcher.OmegaPower
 import com.megacrit.cardcrawl.relics.StoneCalendar
+import dmgcalculator.util.Utils.isAttackingIntent
 
 fun AbstractMonster.getIntentMultiAmt(): Int {
     try {
@@ -18,18 +19,24 @@ fun AbstractMonster.getIntentMultiAmt(): Int {
     }
 }
 
-val AbstractMonster.totalIntentDamage: Int
-    get() {
-        val hits = getIntentMultiAmt()
-        val dmgPerHit = this.intentDmg
-        return hits * dmgPerHit
+val MonsterGroup.aliveMonsters: List<AbstractMonster>
+    get() = monsters.filter {
+        !it.isDeadOrEscaped
     }
 
-val Intent.isAttackingIntent: Boolean
-    get() = this == Intent.ATTACK ||
-            this == Intent.ATTACK_BUFF ||
-            this == Intent.ATTACK_DEBUFF ||
-            this == Intent.ATTACK_DEFEND
+fun List<AbstractMonster>.getIntentDamages(): List<Int> = flatMap {
+    it.getIntentDamages()
+}
+
+fun AbstractMonster.getIntentDamages(): List<Int> {
+    return if (intent.isAttackingIntent) {
+        val hits = getIntentMultiAmt()
+        val dmgPerHit = this.intentDmg
+        List(hits) { dmgPerHit }
+    } else {
+        listOf(0)
+    }
+}
 
 val List<AbstractMonster>.aliveMonsterNumber: Int
     get() = count {

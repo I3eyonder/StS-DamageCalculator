@@ -73,36 +73,47 @@ object CalculateOutgoingDamageRenderer {
         }
     }
 
-    private fun buildDamageInfoMessage(msgBuilder: StringBuilder, cardNetDamageRange: Range) {
-        if (cardNetDamageRange.isConstantsValue) {
-            msgBuilder.append(
-                String.format(
-                    "Deal %s damage",
-                    cardNetDamageRange.value.toString().colored("#00FF00")
-                )
-            )
+    private fun Range.coloredRange(color: String, reversed: Boolean = false): String {
+        return if (isConstantsValue) {
+            value.toString().colored(color)
         } else {
-            msgBuilder.append(
-                String.format(
-                    "Deal %s damage",
-                    (cardNetDamageRange.min.toString() + "~" + cardNetDamageRange.max).colored("#00FF00")
-                )
-            )
+            val a = if (reversed) max else min
+            val b = if (reversed) min else max
+            "%s~%s".format(a, b).colored(color)
         }
+    }
+
+    private fun buildDamageInfoMessage(
+        msgBuilder: StringBuilder,
+        damageRange: Range,
+    ) {
+        // --- Deal damage ---
+        msgBuilder.append(
+            "Deal %s damage".format(
+                damageRange.coloredRange("#00FF00")
+            )
+        )
+
+        // --- Blocked amount ---
         if (blockedAmountRange.isConstantsValue) {
             if (blockedAmountRange.value > 0) {
                 msgBuilder.append("\n")
-                    .append(String.format("(%s blocked)", blockedAmountRange.value.toString().colored("#00FF00")))
+                    .append(
+                        "(%s blocked)".format(
+                            blockedAmountRange.value.toString().colored("#00FF00")
+                        )
+                    )
             }
         } else {
-            msgBuilder.append("\n")
-                .append(
-                    String.format(
-                        "(%s blocked)",
-                        (blockedAmountRange.min.toString() + "~" + blockedAmountRange.max).colored("#00FF00")
+            msgBuilder
+                .append("\n").append(
+                    "(%s blocked)".format(
+                        blockedAmountRange.coloredRange("#00FF00")
                     )
                 )
         }
+
+        // --- Remaining HP ---
         if (remainHPRange.isConstantsValue) {
             if (remainHPRange.value <= 0) {
                 msgBuilder.append("\n")
@@ -110,8 +121,7 @@ object CalculateOutgoingDamageRenderer {
             } else {
                 msgBuilder.append("\n")
                     .append(
-                        String.format(
-                            "%s HP remains",
+                        "%s HP remains".format(
                             remainHPRange.value.toString().colored("#00BFFF")
                         )
                     )
@@ -119,9 +129,8 @@ object CalculateOutgoingDamageRenderer {
         } else {
             msgBuilder.append("\n")
                 .append(
-                    String.format(
-                        "%s HP remains",
-                        (remainHPRange.max.toString() + "~" + remainHPRange.min).colored("#00BFFF")
+                    "%s HP remains".format(
+                        remainHPRange.coloredRange("#00BFFF", reversed = true)
                     )
                 )
         }
@@ -155,7 +164,7 @@ object CalculateOutgoingDamageRenderer {
             rawEndTurnDamgeAmounts
         }
 
-        var bufferCount = monster.getPower(BufferPower.POWER_ID)?.amount ?: 0
+        var bufferPowerAmount = monster.getPower(BufferPower.POWER_ID)?.amount ?: 0
 
         endTurnDamageAmounts.forEach { damageInstance ->
             val netDamageRange = Range(
@@ -166,8 +175,8 @@ object CalculateOutgoingDamageRenderer {
                 getBlockedAmount(damageInstance, remainBlockAmountRange.min),
                 getBlockedAmount(damageInstance, remainBlockAmountRange.max)
             )
-            if (netDamageRange.min > 0 && netDamageRange.max > 0 && bufferCount > 0) {
-                bufferCount--
+            if (netDamageRange.min > 0 && netDamageRange.max > 0 && bufferPowerAmount > 0) {
+                bufferPowerAmount--
                 netDamageRange.set(0)
                 blockedAmountRange.set(0)
             }

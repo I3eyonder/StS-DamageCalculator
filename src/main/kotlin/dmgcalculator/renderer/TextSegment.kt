@@ -5,47 +5,44 @@ import com.badlogic.gdx.graphics.Color
 data class TextSegment(val text: String, val color: Color)
 
 fun String.toSegments(): List<TextSegment> {
-    val result = mutableListOf<TextSegment>()
-    var currentColor = Color.WHITE
+    val segments = mutableListOf<TextSegment>()
+    val colorStack = ArrayDeque<Color>()
+    colorStack.add(Color.WHITE.cpy()) // base color
 
     var i = 0
-    while (i < length) {
-        // Detect closing tag: </#>
+    val sb = StringBuilder()
 
+    fun flushText() {
+        if (sb.isNotEmpty()) {
+            segments += TextSegment(sb.toString(), colorStack.last().cpy())
+            sb.clear()
+        }
+    }
+
+    while (i < length) {
         if (this.startsWith("</#>", i)) {
-            currentColor = Color.WHITE
-            i += 4 // skip "</#>"
+            flushText()
+            if (colorStack.size > 1) colorStack.removeLast()
+            i += 4
             continue
         }
 
-        // Detect opening tag: <#RRGGBB>
         if (this.startsWith("<#", i)) {
             val end = indexOf('>', i)
             if (end != -1) {
-                val hex = this.substring(i + 2, end).trim { it <= ' ' }
-
-                currentColor = try {
-                    Color.valueOf(hex)
-                } catch (_: Exception) {
-                    Color.WHITE
-                }
-
+                val hex = substring(i + 2, end)
+                flushText()
+                colorStack.add(Color.valueOf(hex))
                 i = end + 1
                 continue
             }
         }
 
-        // Normal text until next tag
-        var nextTag = indexOf("<", i)
-        if (nextTag == -1) nextTag = length
-
-        val text = this.substring(i, nextTag)
-        if (!text.isEmpty()) {
-            result.add(TextSegment(text, currentColor))
-        }
-
-        i = nextTag
+        sb.append(this[i])
+        i++
     }
 
-    return result
+    flushText()
+    return segments
 }
+
