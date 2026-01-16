@@ -1,22 +1,12 @@
 package dmgcalculator.entities
 
-class Range {
-
-    var min: Int = 0
-        private set
-
-    var max: Int = 0
-        private set
+data class Range(var min: Int, var max: Int) {
 
     val value: Int
         get() = max
 
     val isConstantsValue: Boolean
         get() = min == max
-
-    constructor(min: Int, max: Int) {
-        set(min, max)
-    }
 
     constructor(value: Int = 0) : this(value, value)
 

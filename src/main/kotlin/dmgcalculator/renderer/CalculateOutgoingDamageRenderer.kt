@@ -5,7 +5,9 @@ import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.helpers.FontHelper
 import com.megacrit.cardcrawl.monsters.AbstractMonster
+import com.megacrit.cardcrawl.powers.BufferPower
 import com.megacrit.cardcrawl.powers.CombustPower
+import com.megacrit.cardcrawl.powers.IntangiblePlayerPower
 import com.megacrit.cardcrawl.powers.TheBombPower
 import com.megacrit.cardcrawl.powers.watcher.OmegaPower
 import com.megacrit.cardcrawl.relics.StoneCalendar
@@ -42,7 +44,7 @@ object CalculateOutgoingDamageRenderer {
                     val damagePerHit = getDamagePerHit(tmpHoveredCard, index)
                     updateCardIntentDamageRange(tmpHoveredCard, aliveMonsterNumber, damagePerHit)
                     updateCardNetDamageAndBlocked()
-                    updateRemainHPAndBlock(cardNetDamageRange)
+                    updateRemainHPAndBlock(cardNetDamageRange, blockedAmountRange)
                     buildDamageInfoMessage(msgBuilder, cardNetDamageRange)
                 } else {
                     cardIntentDamageRange.set(0)
@@ -50,8 +52,8 @@ object CalculateOutgoingDamageRenderer {
                 }
                 if (remainHPRange.max > 0) {
                     if (AbstractDungeon.player.hasEndTurnDamage) {
-                        updateEndTurnNetDamageAndBlocked()
-                        updateRemainHPAndBlock(endTurnNetDamageRange)
+                        endTurnNetDamageRange.set(0)
+                        updateEndTurnNetDamageAndBlocked(monster)
                         if (tmpHoveredCard != null) {
                             msgBuilder.append("\n")
                         }
@@ -89,11 +91,11 @@ object CalculateOutgoingDamageRenderer {
         }
         if (blockedAmountRange.isConstantsValue) {
             if (blockedAmountRange.value > 0) {
-                msgBuilder.append(" ")
+                msgBuilder.append("\n")
                     .append(String.format("(%s blocked)", blockedAmountRange.value.toString().colored("#00FF00")))
             }
         } else {
-            msgBuilder.append(" ")
+            msgBuilder.append("\n")
                 .append(
                     String.format(
                         "(%s blocked)",
@@ -125,45 +127,58 @@ object CalculateOutgoingDamageRenderer {
         }
     }
 
-    private val endTurnDamageAmount: Int
-        get() {
-            val powerDamage = getEndTurnPowerDamage()
-            val relicDamage = getEndTurnRelicDamage()
-            return powerDamage + relicDamage
-        }
-
-    private fun getEndTurnRelicDamage(): Int {
-        var damage = 0;
+    private fun getEndTurnDamageAmounts(): List<Int> = buildList {
         AbstractDungeon.player.run {
+            // relics damage
             if (getRelic(StoneCalendar.ID)?.counter == 7) {
-                damage += 52
+                add(52)
+            }
+
+            // powers damage
+            powers.forEach { power ->
+                when {
+                    power.ID == CombustPower.POWER_ID ||
+                            power.ID == OmegaPower.POWER_ID -> add(power.amount)
+
+                    power.ID.contains(TheBombPower.POWER_ID) && power.amount == 1 ->
+                        add(power.getPrivateField("damage"))
+                }
             }
         }
-        return damage;
     }
 
-    private fun getEndTurnPowerDamage(): Int = AbstractDungeon.player.powers.sumOf { power ->
-        when {
-            power.ID == CombustPower.POWER_ID ||
-                    power.ID == OmegaPower.POWER_ID -> power.amount
-
-            power.ID.contains(TheBombPower.POWER_ID) && power.amount == 1 ->
-                power.getPrivateField("damage")
-
-            else -> 0
+    private fun updateEndTurnNetDamageAndBlocked(monster: AbstractMonster) {
+        val rawEndTurnDamgeAmounts = getEndTurnDamageAmounts()
+        val endTurnDamageAmounts = if (monster.hasPower(IntangiblePlayerPower.POWER_ID)) {
+            List(rawEndTurnDamgeAmounts.size) { 1 }
+        } else {
+            rawEndTurnDamgeAmounts
         }
-    }
 
+        var bufferCount = monster.getPower(BufferPower.POWER_ID)?.amount ?: 0
 
-    private fun updateEndTurnNetDamageAndBlocked() {
-        endTurnDamageAmount.let {
-            endTurnNetDamageRange.set(
-                getNetDamageAmount(it, remainBlockAmountRange.max),
-                getNetDamageAmount(it, remainBlockAmountRange.min)
+        endTurnDamageAmounts.forEach { damageInstance ->
+            val netDamageRange = Range(
+                getNetDamageAmount(damageInstance, remainBlockAmountRange.max),
+                getNetDamageAmount(damageInstance, remainBlockAmountRange.min)
             )
-            blockedAmountRange.set(
-                getBlockedAmount(it, remainBlockAmountRange.min),
-                getBlockedAmount(it, remainBlockAmountRange.max)
+            val blockedAmountRange = Range(
+                getBlockedAmount(damageInstance, remainBlockAmountRange.min),
+                getBlockedAmount(damageInstance, remainBlockAmountRange.max)
+            )
+            if (netDamageRange.min > 0 && netDamageRange.max > 0 && bufferCount > 0) {
+                bufferCount--
+                netDamageRange.set(0)
+                blockedAmountRange.set(0)
+            }
+            updateRemainHPAndBlock(netDamageRange, blockedAmountRange)
+            endTurnNetDamageRange.set(
+                endTurnNetDamageRange.min + netDamageRange.min,
+                endTurnNetDamageRange.max + netDamageRange.max
+            )
+            this.blockedAmountRange.set(
+                this.blockedAmountRange.min + blockedAmountRange.min,
+                this.blockedAmountRange.max + blockedAmountRange.max
             )
         }
     }
@@ -179,7 +194,7 @@ object CalculateOutgoingDamageRenderer {
         )
     }
 
-    private fun updateRemainHPAndBlock(damageRange: Range) {
+    private fun updateRemainHPAndBlock(damageRange: Range, blockedAmountRange: Range) {
         remainHPRange.set(
             (remainHPRange.min - damageRange.max).coerceAtLeast(0),
             (remainHPRange.max - damageRange.min).coerceAtLeast(0)
