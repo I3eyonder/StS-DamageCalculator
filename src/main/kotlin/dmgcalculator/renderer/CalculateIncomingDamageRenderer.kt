@@ -1,6 +1,7 @@
 package dmgcalculator.renderer
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.megacrit.cardcrawl.cards.DamageInfo
 import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.status.Burn
@@ -12,7 +13,7 @@ import com.megacrit.cardcrawl.powers.ConstrictedPower
 import com.megacrit.cardcrawl.powers.IntangiblePlayerPower
 import com.megacrit.cardcrawl.relics.Torii
 import com.megacrit.cardcrawl.relics.TungstenRod
-import dmgcalculator.DmgCalculatorMod
+import dmgcalculator.entities.DmgInfo
 import dmgcalculator.util.*
 
 object CalculateIncomingDamageRenderer {
@@ -49,62 +50,78 @@ object CalculateIncomingDamageRenderer {
     }
 
     private fun buildDamageInfoMessage(): String {
-        var remainHP = AbstractDungeon.player.currentHealth
         var remainBlock = AbstractDungeon.player.currentBlock
-        var blockedAmount = 0
 
-        val loseHP = getLoseHP()
-        remainHP -= loseHP
-
-        // Resolve incoming damages
-        val incomingDamages = getIncomingDamages().let { damages ->
-            // Applying Intangible if needed
-            if (AbstractDungeon.player.hasPower(IntangiblePlayerPower.POWER_ID)) {
-                damages.map { it.coerceAtMost(1) }
-            } else {
-                damages
-            }
-        }
-
-        var bufferPowerAmount = AbstractDungeon.player.getPower(BufferPower.POWER_ID)?.amount ?: 0
-
-        // Compute net damages and update HP/block state
-        val netIncomingDamages = incomingDamages.map { rawDamage ->
-            val blocked = Utils.getBlockedAmount(rawDamage, remainBlock)
-            val rawNet = Utils.getNetDamageAmount(rawDamage, remainBlock)
-
-            // Apply Buffer first
-            var netDamage = if (bufferPowerAmount > 0) {
-                bufferPowerAmount--
-                0
-            } else {
-                rawNet
-            }
-            // Apply relics
-            netDamage = AbstractDungeon.player.relics.fold(netDamage) { acc, relic ->
+        fun applyRelics(dmgInfo: DmgInfo) {
+            AbstractDungeon.player.relics.forEach { relic ->
                 when (relic.relicId) {
-                    TungstenRod.ID -> (acc - 1).coerceAtLeast(0)
-                    Torii.ID -> if (acc in 2..5) 1 else acc
-                    else -> acc
+                    TungstenRod.ID ->
+                        dmgInfo.amount = (dmgInfo.amount - 1).coerceAtLeast(0)
+
+                    Torii.ID -> {
+                        if (dmgInfo.type !in listOf(
+                                DamageInfo.DamageType.HP_LOSS,
+                                DamageInfo.DamageType.THORNS
+                            ) && dmgInfo.amount in 2..5
+                        ) {
+                            dmgInfo.amount = 1
+                        }
+                    }
                 }
-            }.coerceAtLeast(0)
-
-            blockedAmount += blocked
-            remainBlock -= blocked
-            remainHP -= netDamage
-
-            netDamage
+            }
         }
 
-        val netIncomingDamage = netIncomingDamages.sum()
+        // --- Build incoming damage list with all effects applied ---
+        val incomingDamages = getIncomingDamages().apply {
+
+            // Apply Intangible
+            if (AbstractDungeon.player.hasPower(IntangiblePlayerPower.POWER_ID)) {
+                forEach { it.amount = it.amount.coerceAtMost(1) }
+            }
+
+            var bufferAmount = AbstractDungeon.player.getPower(BufferPower.POWER_ID)?.amount ?: 0
+
+            forEach { dmgInfo ->
+                if (dmgInfo.type != DamageInfo.DamageType.HP_LOSS) {
+                    // Block
+                    val blocked = Utils.getBlockedAmount(dmgInfo.amount, remainBlock)
+                    val netDamage = Utils.getNetDamageAmount(dmgInfo.amount, remainBlock)
+                    remainBlock -= blocked
+                    dmgInfo.amount = netDamage
+                }
+                // Buffer
+                if (dmgInfo.amount > 0 && bufferAmount > 0) {
+                    bufferAmount--
+                    dmgInfo.amount = 0
+                }
+
+                applyRelics(dmgInfo)
+            }
+        }
+
+        // --- Final calculations ---
+        val takenDamage = incomingDamages
+            .filter { it.type != DamageInfo.DamageType.HP_LOSS }
+            .sumOf { it.amount }
+
+        val loseHP = incomingDamages
+            .filter { it.type == DamageInfo.DamageType.HP_LOSS }
+            .sumOf { it.amount }
+
+        val blockedAmount = AbstractDungeon.player.currentBlock - remainBlock
+
+        val remainHP = AbstractDungeon.player.currentHealth -
+                incomingDamages.sumOf { it.amount }
+
         val dmgColor = when {
-            netIncomingDamage == 0 -> "#00FF00"
+            takenDamage == 0 -> "#00FF00"
             remainHP > 0 -> "#FF4444"
             else -> "#FF0000"
         }
 
+        // --- Build output message ---
         return buildString {
-            append("Take %s damage".format(netIncomingDamage.toString().colored(dmgColor)))
+            append("Take %s damage".format(takenDamage.toString().colored(dmgColor)))
 
             if (blockedAmount > 0) {
                 append("\n")
@@ -124,23 +141,32 @@ object CalculateIncomingDamageRenderer {
                 append("%s".format("DEAD".colored("#FF0000")))
             }
         }
-
     }
 
-    private fun getIncomingDamages(): List<Int> {
-        // Resolve power intent damages
-        val powerDamages = AbstractDungeon.player.powers.mapNotNull { power ->
-            when (power.ID) {
-                ConstrictedPower.POWER_ID -> power.amount
+    private fun getIncomingDamages(): List<DmgInfo> {
+        // Resolve hand intent damages
+        val handDamages = AbstractDungeon.player.hand.group.mapNotNull { card ->
+            when (card.cardID) {
+                Burn.ID -> DmgInfo(card.magicNumber, DamageInfo.DamageType.THORNS)
+                Decay.ID -> DmgInfo(2, DamageInfo.DamageType.THORNS)
+                Regret.ID -> DmgInfo(AbstractDungeon.player.hand.size(), DamageInfo.DamageType.HP_LOSS)
                 else -> null
             }
         }
 
-        // Resolve hand intent damages
-        val handDamages = AbstractDungeon.player.hand.group.mapNotNull { card ->
-            when (card.cardID) {
-                Burn.ID -> card.magicNumber
-                Decay.ID -> 2
+        // Resolve power intent damages
+        val powerDamages = AbstractDungeon.player.powers.mapNotNull { power ->
+            when (power.ID) {
+                ConstrictedPower.POWER_ID -> DmgInfo(
+                    power.amount,
+                    DamageInfo.DamageType.THORNS
+                )
+
+                CombustPower.POWER_ID -> DmgInfo(
+                    power.getPrivateField("hpLoss"),
+                    DamageInfo.DamageType.HP_LOSS
+                )
+
                 else -> null
             }
         }
@@ -148,24 +174,6 @@ object CalculateIncomingDamageRenderer {
         // Resolve monster intent damages
         val monsterIntentDamages = AbstractDungeon.getMonsters().aliveMonsters.getIntentDamages()
 
-        return powerDamages + handDamages + monsterIntentDamages
-    }
-
-    private fun getLoseHP(): Int {
-        var loseHP = 0
-        // Check Combust
-        val combustPower = AbstractDungeon.player.getPower(CombustPower.POWER_ID)
-        if (combustPower != null) {
-            loseHP += combustPower.getPrivateField<Int>("hpLoss")
-        }
-        // Check hands
-        loseHP += AbstractDungeon.player.hand.group.fold(0) { acc, card ->
-            if (card.cardID == Regret.ID) {
-                acc + AbstractDungeon.player.hand.size()
-            } else {
-                acc
-            }
-        }
-        return loseHP
+        return handDamages + powerDamages + monsterIntentDamages
     }
 }

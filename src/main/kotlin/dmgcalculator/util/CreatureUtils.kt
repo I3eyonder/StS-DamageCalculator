@@ -1,5 +1,6 @@
 package dmgcalculator.util
 
+import com.megacrit.cardcrawl.cards.DamageInfo
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.monsters.AbstractMonster
@@ -8,6 +9,7 @@ import com.megacrit.cardcrawl.powers.CombustPower
 import com.megacrit.cardcrawl.powers.TheBombPower
 import com.megacrit.cardcrawl.powers.watcher.OmegaPower
 import com.megacrit.cardcrawl.relics.StoneCalendar
+import dmgcalculator.entities.DmgInfo
 import dmgcalculator.util.Utils.isAttackingIntent
 
 fun AbstractMonster.getIntentMultiAmt(): Int {
@@ -24,17 +26,22 @@ val MonsterGroup.aliveMonsters: List<AbstractMonster>
         !it.isDeadOrEscaped
     }
 
-fun List<AbstractMonster>.getIntentDamages(): List<Int> = flatMap {
+fun List<AbstractMonster>.getIntentDamages(): List<DmgInfo> = flatMap {
     it.getIntentDamages()
 }
 
-fun AbstractMonster.getIntentDamages(): List<Int> {
+fun AbstractMonster.getIntentDamages(): List<DmgInfo> {
     return if (intent.isAttackingIntent) {
         val hits = getIntentMultiAmt()
         val dmgPerHit = this.intentDmg
-        List(hits) { dmgPerHit }
+        List(hits) {
+            DmgInfo(
+                dmgPerHit,
+                DamageInfo.DamageType.NORMAL
+            )
+        }
     } else {
-        listOf(0)
+        listOf()
     }
 }
 
