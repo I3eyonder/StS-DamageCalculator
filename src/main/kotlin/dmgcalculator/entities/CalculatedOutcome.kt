@@ -1,16 +1,17 @@
 package dmgcalculator.entities
 
-data class CalculatedOutcome(
-    val baseHPAmount: Int,
-    val baseBlockAmount: Int,
-    var damageAmount: Int = 0,
-    var adjustHPAmount: Int = 0,
-    var remainBlockAmount: Int = baseBlockAmount,
+class CalculatedOutcome(
+    val baseHPAmount: Range,
+    val baseBlockAmount: Range,
 ) {
 
-    val remainHPAmount: Int
+    var damageAmount = Range()
+    var adjustHPAmount = Range()
+    var remainBlockAmount = baseBlockAmount.copy()
+
+    val remainHPAmount: Range
         get() = baseHPAmount - damageAmount + adjustHPAmount
 
-    val blockedAmount: Int
+    val blockedAmount: Range
         get() = baseBlockAmount - remainBlockAmount
 }
