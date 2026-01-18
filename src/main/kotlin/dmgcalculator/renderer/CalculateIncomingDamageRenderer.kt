@@ -7,14 +7,11 @@ import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.helpers.FontHelper
-import com.megacrit.cardcrawl.powers.BufferPower
 import com.megacrit.cardcrawl.powers.CombustPower
 import com.megacrit.cardcrawl.powers.ConstrictedPower
-import com.megacrit.cardcrawl.powers.IntangiblePlayerPower
-import com.megacrit.cardcrawl.relics.Torii
-import com.megacrit.cardcrawl.relics.TungstenRod
 import dmgcalculator.entities.DmgInfo
 import dmgcalculator.util.*
+import dmgcalculator.util.Utils.calculateDamage
 
 object CalculateIncomingDamageRenderer {
 
@@ -50,92 +47,44 @@ object CalculateIncomingDamageRenderer {
     }
 
     private fun buildDamageInfoMessage(): String {
-        var remainBlock = AbstractDungeon.player.currentBlock
+        val calculatedOutcome = getIncomingDamages().calculateDamage(
+            AbstractDungeon.player
+        )
 
-        fun applyRelics(dmgInfo: DmgInfo) {
-            AbstractDungeon.player.relics.forEach { relic ->
-                when (relic.relicId) {
-                    TungstenRod.ID ->
-                        dmgInfo.amount = (dmgInfo.amount - 1).coerceAtLeast(0)
-
-                    Torii.ID -> {
-                        if (dmgInfo.type !in listOf(
-                                DamageInfo.DamageType.HP_LOSS,
-                                DamageInfo.DamageType.THORNS
-                            ) && dmgInfo.amount in 2..5
-                        ) {
-                            dmgInfo.amount = 1
-                        }
-                    }
-                }
-            }
-        }
-
-        // --- Build incoming damage list with all effects applied ---
-        val incomingDamages = getIncomingDamages().apply {
-
-            // Apply Intangible
-            if (AbstractDungeon.player.hasPower(IntangiblePlayerPower.POWER_ID)) {
-                forEach { it.amount = it.amount.coerceAtMost(1) }
-            }
-
-            var bufferAmount = AbstractDungeon.player.getPower(BufferPower.POWER_ID)?.amount ?: 0
-
-            forEach { dmgInfo ->
-                if (dmgInfo.type != DamageInfo.DamageType.HP_LOSS) {
-                    // Block
-                    val blocked = Utils.getBlockedAmount(dmgInfo.amount, remainBlock)
-                    val netDamage = Utils.getNetDamageAmount(dmgInfo.amount, remainBlock)
-                    remainBlock -= blocked
-                    dmgInfo.amount = netDamage
-                }
-                // Buffer
-                if (dmgInfo.amount > 0 && bufferAmount > 0) {
-                    bufferAmount--
-                    dmgInfo.amount = 0
-                }
-
-                applyRelics(dmgInfo)
-            }
-        }
-
-        // --- Final calculations ---
-        val takenDamage = incomingDamages
-            .filter { it.type != DamageInfo.DamageType.HP_LOSS }
-            .sumOf { it.amount }
-
-        val loseHP = incomingDamages
-            .filter { it.type == DamageInfo.DamageType.HP_LOSS }
-            .sumOf { it.amount }
-
-        val blockedAmount = AbstractDungeon.player.currentBlock - remainBlock
-
-        val remainHP = AbstractDungeon.player.currentHealth -
-                incomingDamages.sumOf { it.amount }
-
-        val dmgColor = when {
-            takenDamage == 0 -> "#00FF00"
-            remainHP > 0 -> "#FF4444"
-            else -> "#FF0000"
+        val dmgColor = if (calculatedOutcome.damageAmount == 0) {
+            "#00FF00"
+        } else {
+            "#FF0000"
         }
 
         // --- Build output message ---
         return buildString {
-            append("Take %s damage".format(takenDamage.toString().colored(dmgColor)))
+            append("Take %s damage".format(calculatedOutcome.damageAmount.toString().colored(dmgColor)))
 
-            if (blockedAmount > 0) {
+            if (calculatedOutcome.blockedAmount > 0) {
                 append("\n")
-                append("(%s blocked)".format(blockedAmount.toString().colored("#00FF00")))
+                append("(%s blocked)".format(calculatedOutcome.blockedAmount.toString().colored("#00FF00")))
             }
 
-            if (loseHP > 0) {
+            if (calculatedOutcome.adjustHPAmount < 0) {
                 append("\n")
-                append("Lose extra %s HP".format(loseHP.toString().colored("#FF0000")))
+                append(
+                    "Lose extra %s HP".format(
+                        calculatedOutcome.adjustHPAmount.unaryMinus().toString().colored("#FF0000")
+                    )
+                )
+            } else if (calculatedOutcome.adjustHPAmount > 0) {
+                append("\n")
+                append(
+                    "Gain extra %s HP".format(
+                        calculatedOutcome.adjustHPAmount.toString().colored("#FF0000")
+                    )
+                )
             }
 
-            if (remainHP > 0) {
+            if (calculatedOutcome.remainHPAmount > 0) {
                 append("\n")
-                append("%s HP remains".format(remainHP.toString().colored("#00BFFF")))
+                append("%s HP remains".format(calculatedOutcome.remainHPAmount.toString().colored("#00BFFF")))
             } else {
                 append("\n")
                 append("%s".format("DEAD".colored("#FF0000")))
