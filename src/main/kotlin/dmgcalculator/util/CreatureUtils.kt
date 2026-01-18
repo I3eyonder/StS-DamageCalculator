@@ -10,6 +10,8 @@ import com.megacrit.cardcrawl.powers.TheBombPower
 import com.megacrit.cardcrawl.powers.watcher.OmegaPower
 import com.megacrit.cardcrawl.relics.StoneCalendar
 import dmgcalculator.entities.DmgInfo
+import dmgcalculator.entities.Range
+import dmgcalculator.entities.asRange
 import dmgcalculator.util.Utils.isAttackingIntent
 
 fun AbstractMonster.getIntentMultiAmt(): Int {
@@ -36,7 +38,7 @@ fun AbstractMonster.getIntentDamages(): List<DmgInfo> {
         val dmgPerHit = this.intentDmg
         List(hits) {
             DmgInfo(
-                dmgPerHit,
+                dmgPerHit.asRange(),
                 DamageInfo.DamageType.NORMAL
             )
         }

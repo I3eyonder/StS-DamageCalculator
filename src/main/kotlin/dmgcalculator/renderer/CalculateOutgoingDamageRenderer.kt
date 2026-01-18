@@ -13,8 +13,6 @@ import com.megacrit.cardcrawl.powers.watcher.OmegaPower
 import com.megacrit.cardcrawl.relics.StoneCalendar
 import dmgcalculator.entities.Range
 import dmgcalculator.util.*
-import dmgcalculator.util.Utils.getBlockedAmount
-import dmgcalculator.util.Utils.getNetDamageAmount
 
 object CalculateOutgoingDamageRenderer {
     private val cardIntentDamageRange = Range()
@@ -168,12 +166,12 @@ object CalculateOutgoingDamageRenderer {
 
         endTurnDamageAmounts.forEach { damageInstance ->
             val netDamageRange = Range(
-                getNetDamageAmount(damageInstance, remainBlockAmountRange.max),
-                getNetDamageAmount(damageInstance, remainBlockAmountRange.min)
+                Utils.getNetDamageAmount(damageInstance, remainBlockAmountRange.max),
+                Utils.getNetDamageAmount(damageInstance, remainBlockAmountRange.min)
             )
             val blockedAmountRange = Range(
-                getBlockedAmount(damageInstance, remainBlockAmountRange.min),
-                getBlockedAmount(damageInstance, remainBlockAmountRange.max)
+                Utils.getBlockedAmount(damageInstance, remainBlockAmountRange.min),
+                Utils.getBlockedAmount(damageInstance, remainBlockAmountRange.max)
             )
             if (netDamageRange.min > 0 && netDamageRange.max > 0 && bufferPowerAmount > 0) {
                 bufferPowerAmount--
@@ -194,12 +192,12 @@ object CalculateOutgoingDamageRenderer {
 
     private fun updateCardNetDamageAndBlocked() {
         cardNetDamageRange.set(
-            getNetDamageAmount(cardIntentDamageRange.min, remainBlockAmountRange.max),
-            getNetDamageAmount(cardIntentDamageRange.max, remainBlockAmountRange.min)
+            Utils.getNetDamageAmount(cardIntentDamageRange.min, remainBlockAmountRange.max),
+            Utils.getNetDamageAmount(cardIntentDamageRange.max, remainBlockAmountRange.min)
         )
         blockedAmountRange.set(
-            getBlockedAmount(cardIntentDamageRange.min, remainBlockAmountRange.min),
-            getBlockedAmount(cardIntentDamageRange.max, remainBlockAmountRange.max)
+            Utils.getBlockedAmount(cardIntentDamageRange.min, remainBlockAmountRange.min),
+            Utils.getBlockedAmount(cardIntentDamageRange.max, remainBlockAmountRange.max)
         )
     }
 

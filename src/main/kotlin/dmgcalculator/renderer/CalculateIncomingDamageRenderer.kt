@@ -51,7 +51,7 @@ object CalculateIncomingDamageRenderer {
             AbstractDungeon.player
         )
 
-        val dmgColor = if (calculatedOutcome.damageAmount == 0) {
+        val dmgColor = if (calculatedOutcome.damageAmount.value == 0) {
             "#00FF00"
         } else {
             "#FF0000"
@@ -61,30 +61,30 @@ object CalculateIncomingDamageRenderer {
         return buildString {
             append("Take %s damage".format(calculatedOutcome.damageAmount.toString().colored(dmgColor)))
 
-            if (calculatedOutcome.blockedAmount > 0) {
+            if (calculatedOutcome.blockedAmount.value > 0) {
                 append("\n")
                 append("(%s blocked)".format(calculatedOutcome.blockedAmount.toString().colored("#00FF00")))
             }
 
-            if (calculatedOutcome.adjustHPAmount < 0) {
+            if (calculatedOutcome.adjustHPAmount.value < 0) {
                 append("\n")
                 append(
                     "Lose extra %s HP".format(
-                        calculatedOutcome.adjustHPAmount.unaryMinus().toString().colored("#FF0000")
+                        calculatedOutcome.adjustHPAmount.value.unaryMinus().toString().colored("#FF0000")
                     )
                 )
-            } else if (calculatedOutcome.adjustHPAmount > 0) {
+            } else if (calculatedOutcome.adjustHPAmount.value > 0) {
                 append("\n")
                 append(
                     "Gain extra %s HP".format(
-                        calculatedOutcome.adjustHPAmount.toString().colored("#FF0000")
+                        calculatedOutcome.adjustHPAmount.value.toString().colored("#FF0000")
                     )
                 )
             }
 
-            if (calculatedOutcome.remainHPAmount > 0) {
+            if (calculatedOutcome.remainHPAmount.value > 0) {
                 append("\n")
-                append("%s HP remains".format(calculatedOutcome.remainHPAmount.toString().colored("#00BFFF")))
+                append("%s HP remains".format(calculatedOutcome.remainHPAmount.value.toString().colored("#00BFFF")))
             } else {
                 append("\n")
                 append("%s".format("DEAD".colored("#FF0000")))
@@ -112,7 +112,7 @@ object CalculateIncomingDamageRenderer {
                 )
 
                 CombustPower.POWER_ID -> DmgInfo(
-                    power.getPrivateField("hpLoss"),
+                    power.getPrivateField<Int>("hpLoss"),
                     DamageInfo.DamageType.HP_LOSS
                 )
 

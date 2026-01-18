@@ -21,6 +21,10 @@ data class Range(var min: Int, var max: Int) {
         this.set(value, value)
     }
 
+    fun set(other: Range) {
+        this.set(other.min, other.max)
+    }
+
     operator fun plus(amount: Int): Range {
         return Range(min + amount, max + amount)
     }
@@ -37,4 +41,13 @@ data class Range(var min: Int, var max: Int) {
         return Range(min - other.max, max - other.min)
     }
 
+    operator fun minusAssign(other: Range) {
+        min -= other.max
+        max -= other.min
+    }
+
+    operator fun plusAssign(other: Range) {
+        min += other.min
+        max += other.max
+    }
 }

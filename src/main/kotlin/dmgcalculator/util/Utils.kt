@@ -12,6 +12,9 @@ import com.megacrit.cardcrawl.relics.Torii
 import com.megacrit.cardcrawl.relics.TungstenRod
 import dmgcalculator.entities.CalculatedOutcome
 import dmgcalculator.entities.DmgInfo
+import dmgcalculator.entities.Range
+import dmgcalculator.renderer.CalculateOutgoingDamageRenderer.cardIntentDamageRange
+import dmgcalculator.renderer.CalculateOutgoingDamageRenderer.remainBlockAmountRange
 import kotlin.math.min
 
 object Utils {
@@ -45,20 +48,29 @@ object Utils {
         forEach { dmgInfo ->
             // Apply Intangible
             if (hasIntangiblePlayerPower) {
-                dmgInfo.amount = dmgInfo.amount.coerceAtMost(1)
+                dmgInfo.amount.set(
+                    dmgInfo.amount.min.coerceAtMost(1),
+                    dmgInfo.amount.max.coerceAtMost(1)
+                )
             }
 
             if (dmgInfo.type != DamageInfo.DamageType.HP_LOSS) {
                 // Apply Block
-                val blocked = Utils.getBlockedAmount(dmgInfo.amount, calculatedOutcome.remainBlockAmount)
-                val netDamage = Utils.getNetDamageAmount(dmgInfo.amount, calculatedOutcome.remainBlockAmount)
+                val blocked = Range(
+                    getBlockedAmount(dmgInfo.amount.min, calculatedOutcome.remainBlockAmount.min),
+                    getBlockedAmount(dmgInfo.amount.max, calculatedOutcome.remainBlockAmount.max)
+                )
+                val netDamage = Range(
+                    getNetDamageAmount(dmgInfo.amount.min, calculatedOutcome.remainBlockAmount.max),
+                    getNetDamageAmount(dmgInfo.amount.max, calculatedOutcome.remainBlockAmount.min)
+                )
                 calculatedOutcome.remainBlockAmount -= blocked
-                dmgInfo.amount = netDamage
+                dmgInfo.amount.set(netDamage)
             }
             // Apply Buffer
-            if (dmgInfo.amount > 0 && bufferAmount > 0) {
+            if (dmgInfo.amount.min > 0 && bufferAmount > 0) {
                 bufferAmount--
-                dmgInfo.amount = 0
+                dmgInfo.amount.set(0)
             }
 
             // Apply Relics
@@ -66,15 +78,21 @@ object Utils {
                 target.relics.forEach { relic ->
                     when (relic.relicId) {
                         TungstenRod.ID ->
-                            dmgInfo.amount = (dmgInfo.amount - 1).coerceAtLeast(0)
+                            dmgInfo.amount.set(
+                                (dmgInfo.amount.min - 1).coerceAtLeast(0),
+                                (dmgInfo.amount.max - 1).coerceAtLeast(0)
+                            )
 
                         Torii.ID -> {
                             if (dmgInfo.type !in listOf(
                                     DamageInfo.DamageType.HP_LOSS,
                                     DamageInfo.DamageType.THORNS
-                                ) && dmgInfo.amount in 2..5
+                                )
                             ) {
-                                dmgInfo.amount = 1
+                                dmgInfo.amount.set(
+                                    if (dmgInfo.amount.min in 2..5) 1 else dmgInfo.amount.min,
+                                    if (dmgInfo.amount.max in 2..5) 1 else dmgInfo.amount.max
+                                )
                             }
                         }
                     }
@@ -86,6 +104,7 @@ object Utils {
                     damageAmount += dmgInfo.amount
                 } else {
                     adjustHPAmount += dmgInfo.amount.unaryMinus()
+                    adjustHPAmount -= dmgInfo.amount
                 }
             }
         }
