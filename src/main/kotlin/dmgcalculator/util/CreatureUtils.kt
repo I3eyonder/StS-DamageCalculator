@@ -4,6 +4,7 @@ import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.monsters.MonsterGroup
+import com.megacrit.cardcrawl.powers.AbstractPower
 import com.megacrit.cardcrawl.powers.CombustPower
 import com.megacrit.cardcrawl.powers.TheBombPower
 import com.megacrit.cardcrawl.powers.watcher.OmegaPower
@@ -90,5 +91,18 @@ fun AbstractPlayer.getEndTurnIntentActions(): List<Action> = buildList {
             power.ID.contains(TheBombPower.POWER_ID) && power.amount == 1 ->
                 addToBottom(Action.DamageThorns(power.getPrivateField("damage")))
         }
+    }
+}
+
+fun <T> AbstractCreature.applyTemporaryPower(power: AbstractPower, block: () -> T): T = if (!hasPower(power.ID)) {
+    addPower(power)
+    block().also {
+        powers.remove(power)
+    }
+} else {
+    addPower(power)
+    block().also {
+        power.amount = power.amount.unaryMinus()
+        addPower(power)
     }
 }
