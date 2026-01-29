@@ -36,7 +36,10 @@ fun Outcome.apply(
             remainBlock += action.value
         }
 
-        else -> {
+        is Action.DamageNormal,
+        is Action.DamageThorns,
+        is Action.LoseHP,
+            -> {
             // Shared logic for DamageNormal and DamageThorns
             var damage = if (useMax) {
                 action.max
@@ -86,6 +89,10 @@ fun Outcome.apply(
                 adjustHP -= damage
             }
             remainHP = (remainHP - damage).coerceAtLeast(0)
+        }
+
+        else -> {
+            // No action
         }
     }
 }

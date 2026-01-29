@@ -19,6 +19,9 @@ import com.megacrit.cardcrawl.powers.VulnerablePower
 import com.megacrit.cardcrawl.relics.ChemicalX
 import com.megacrit.cardcrawl.ui.panels.EnergyPanel
 import dmgcalculator.entities.Action
+import dmgcalculator.entities.asGroupActions
+import dmgcalculator.entities.flatten
+import dmgcalculator.util.Utils.addToBottom
 
 private val randomAttackCards = listOf(
     SwordBoomerang.ID
@@ -70,48 +73,59 @@ fun AbstractCard.getDamagePerHit(monsterIndex: Int): Int = if (multiDamage != nu
     damage
 }
 
-fun AbstractCard.getAttackIntentActions(
+fun AbstractCard.getIntentActions(
     monster: AbstractMonster,
     monsterIndex: Int,
     aliveMonsterCount: Int,
 ): List<Action> {
-    return if (type == AbstractCard.CardType.ATTACK) {
-        val player = AbstractDungeon.player
-        val attackActions = createAttackIntentActions(monster, monsterIndex, aliveMonsterCount)
-        if (player.hasPower(DoubleTapPower.POWER_ID) ||
-            player.hasPower(DuplicationPower.POWER_ID)
-        ) {
-            val nextAttackActions = if (isCardGiveVulnearable && !monster.hasPower(VulnerablePower.POWER_ID)) {
-                val tmpCard = makeSameInstanceOf()
-                monster.applyTemporaryPower(VulnerablePower(monster, 1, false)) {
-                    tmpCard.createAttackIntentActions(monster, monsterIndex, aliveMonsterCount)
+    val baseAction = createIntentAction(monster, monsterIndex, aliveMonsterCount)
+    val acttions = mutableListOf(baseAction)
+    // Apply powers that modify action here if needed
+    AbstractDungeon.player.powers.forEach { power ->
+        when (power.ID) {
+            DoubleTapPower.POWER_ID, DuplicationPower.POWER_ID -> {
+                if (type == AbstractCard.CardType.ATTACK) {
+                    if (isCardGiveVulnearable && !monster.hasPower(VulnerablePower.POWER_ID)) {
+                        val tmpCard = makeSameInstanceOf()
+                        val extraAction = monster.applyTemporaryPower(VulnerablePower(monster, 1, false)) {
+                            tmpCard.createIntentAction(monster, monsterIndex, aliveMonsterCount)
+                        }
+                        acttions.addToBottom(extraAction)
+                    } else {
+                        acttions.addToBottom(baseAction)
+                    }
+                } else if (power.ID == DuplicationPower.POWER_ID) {
+                    acttions.addToBottom(baseAction)
                 }
-            } else {
-                attackActions
             }
-            attackActions + nextAttackActions
-        } else {
-            attackActions
         }
-    } else {
-        emptyList()
     }
+    return acttions.flatten()
 }
 
-private fun AbstractCard.createAttackIntentActions(
+private fun AbstractCard.createIntentAction(
     monster: AbstractMonster,
     monsterIndex: Int,
     aliveMonsterCount: Int,
-): List<Action> {
-    calculateCardDamage(monster)
-    val damagePerHit = getDamagePerHit(monsterIndex)
-    return if (isRandomAttackCard && aliveMonsterCount > 1) {
-        List(cardHitCount) {
-            Action.DamageNormal(0, damagePerHit)
-        }
-    } else {
-        List(cardHitCount) {
+): Action {
+    return if (type == AbstractCard.CardType.ATTACK) {
+        calculateCardDamage(monster)
+        val damagePerHit = getDamagePerHit(monsterIndex)
+        val cardHitCount = this.cardHitCount
+        if (cardHitCount > 1) {
+            if (isRandomAttackCard && aliveMonsterCount > 1) {
+                List(cardHitCount) {
+                    Action.DamageNormal(0, damagePerHit)
+                }.asGroupActions()
+            } else {
+                List(cardHitCount) {
+                    Action.DamageNormal(damagePerHit)
+                }.asGroupActions()
+            }
+        } else {
             Action.DamageNormal(damagePerHit)
         }
+    } else {
+        Action.NoAction
     }
 }

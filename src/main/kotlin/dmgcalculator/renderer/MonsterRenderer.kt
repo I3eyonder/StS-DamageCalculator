@@ -12,12 +12,8 @@ object MonsterRenderer {
         if (AbstractDungeon.isScreenUp) return
         if (AbstractDungeon.getCurrMapNode() == null) return
 
-        val hoveringCard = if (hoveredCard?.canDealDamage == true) {
-            hoveredCard.makeStatEquivalentCopy().apply {
-                applyPowers()
-            }
-        } else {
-            null
+        val hoveringCard = hoveredCard?.makeStatEquivalentCopy()?.apply {
+            applyPowers()
         }
         val player = AbstractDungeon.player
         val aliveMonstersIndexed = AbstractDungeon.getMonsters().aliveMonstersIndexed
@@ -27,7 +23,7 @@ object MonsterRenderer {
         aliveMonstersIndexed.forEach { (index, monster) ->
             msgBuilder.clear()
             val creatureInfo = CreatureInfo(monster)
-            val (worstCardOutcome, bestCardOutcome) = hoveringCard?.getAttackIntentActions(monster, index, aliveMonsterCount)
+            val (worstCardOutcome, bestCardOutcome) = hoveringCard?.getIntentActions(monster, index, aliveMonsterCount)
                 ?.calculateOutcome(creatureInfo) ?: (null to null)
             if (worstCardOutcome != null && bestCardOutcome != null) {
                 val showCardRemainHP = bestCardOutcome.isDead || !player.hasEndTurnDamage
