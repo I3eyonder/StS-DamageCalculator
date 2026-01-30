@@ -51,9 +51,10 @@ fun List<Action>.flatten(): List<Action> = buildList {
 
 fun List<Action>.calculateWorstOutcome(creatureInfo: CreatureInfo): Outcome {
     return Outcome(
-        creatureInfo.remainHP,
-        creatureInfo.remainBlock,
-        creatureInfo.remainBuffer,
+        remainHP = creatureInfo.remainHP,
+        remainBlock = creatureInfo.remainBlock,
+        remainBuffer = creatureInfo.remainBuffer,
+        hasCurlUpPower = creatureInfo.hasCurlUpPower
     ).also {
         forEach { action ->
             it.apply(action, false, creatureInfo)
@@ -63,9 +64,10 @@ fun List<Action>.calculateWorstOutcome(creatureInfo: CreatureInfo): Outcome {
 
 fun List<Action>.calculateBestOutcome(creatureInfo: CreatureInfo): Outcome {
     return Outcome(
-        creatureInfo.remainHP,
-        creatureInfo.remainBlock,
-        creatureInfo.remainBuffer,
+        remainHP = creatureInfo.remainHP,
+        remainBlock = creatureInfo.remainBlock,
+        remainBuffer = creatureInfo.remainBuffer,
+        hasCurlUpPower = creatureInfo.hasCurlUpPower
     ).also {
         forEach { action ->
             it.apply(action, true, creatureInfo)

@@ -1,6 +1,7 @@
 package dmgcalculator.entities
 
 import com.megacrit.cardcrawl.characters.AbstractPlayer
+import com.megacrit.cardcrawl.powers.CurlUpPower
 import com.megacrit.cardcrawl.relics.Torii
 import com.megacrit.cardcrawl.relics.TungstenRod
 import dmgcalculator.util.Utils.getBlockedAmount
@@ -13,6 +14,7 @@ data class Outcome(
     var damage: Int = 0,
     var blocked: Int = 0,
     var adjustHP: Int = 0,
+    var hasCurlUpPower: Boolean = false,
 ) {
 
     val isDead: Boolean
@@ -81,6 +83,13 @@ fun Outcome.apply(
                         }
                     }
                 }
+            }
+
+            // Apply Curl Up power
+            if (damage > 0 && action is Action.DamageNormal && hasCurlUpPower) {
+                val curlUpPower = creatureInfo.creature.getPower(CurlUpPower.POWER_ID)
+                remainBlock += curlUpPower.amount
+                hasCurlUpPower = false
             }
 
             if (action !is Action.LoseHP) {
