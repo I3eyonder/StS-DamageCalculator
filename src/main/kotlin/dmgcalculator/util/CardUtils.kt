@@ -109,15 +109,27 @@ fun AbstractCard.getIntentActions(
         }
     }
 
-    // Apply Choke if needed
-    if (monster.hasPower(ChokePower.POWER_ID)) {
-        val chokePower = monster.getPower(ChokePower.POWER_ID)
-        actions.replacesWith { originActions ->
-            originActions.map { action ->
-                listOf(
-                    action,
-                    Action.LoseHP(chokePower.amount)
-                ).asGroupedAction()
+    // Apply monster debuff and player buff if needed
+    actions.replacesWith { originActions ->
+        originActions.map { action ->
+            val monsterExtraActions = monster.powers.mapNotNull { power ->
+                when (power.ID) {
+                    ChokePower.POWER_ID -> Action.LoseHP(power.amount)
+                    else -> null
+                }
+            }
+            val playerExtraActions = player.powers.mapNotNull { power ->
+                when (power.ID) {
+                    ThousandCutsPower.POWER_ID -> Action.DamageThorns(power.amount)
+                    else -> null
+                }
+            }
+            (monsterExtraActions + playerExtraActions).let { extraActions ->
+                if (extraActions.isEmpty()) {
+                    action
+                } else {
+                    listOf(action).plus(extraActions).asGroupedAction()
+                }
             }
         }
     }
