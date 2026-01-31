@@ -14,14 +14,11 @@ import com.megacrit.cardcrawl.cards.tempCards.Expunger
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.orbs.Lightning
-import com.megacrit.cardcrawl.powers.DoubleTapPower
-import com.megacrit.cardcrawl.powers.DuplicationPower
-import com.megacrit.cardcrawl.powers.PanachePower
-import com.megacrit.cardcrawl.powers.VulnerablePower
+import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.relics.ChemicalX
 import com.megacrit.cardcrawl.ui.panels.EnergyPanel
 import dmgcalculator.entities.Action
-import dmgcalculator.entities.asGroupedActions
+import dmgcalculator.entities.asGroupedAction
 import dmgcalculator.entities.flatten
 import dmgcalculator.util.Utils.addToBottom
 import dmgcalculator.util.Utils.replacesWith
@@ -112,6 +109,19 @@ fun AbstractCard.getIntentActions(
         }
     }
 
+    // Apply Choke if needed
+    if (monster.hasPower(ChokePower.POWER_ID)) {
+        val chokePower = monster.getPower(ChokePower.POWER_ID)
+        actions.replacesWith { originActions ->
+            originActions.map { action ->
+                listOf(
+                    action,
+                    Action.LoseHP(chokePower.amount)
+                ).asGroupedAction()
+            }
+        }
+    }
+
     // Apply Panache if needed
     player.getPower(PanachePower.POWER_ID)?.let { panachePower ->
         try {
@@ -152,11 +162,11 @@ private fun AbstractCard.createIntentAction(
                 if (isRandomAttackCard && aliveMonsterCount > 1) {
                     List(cardHitCount) {
                         Action.DamageNormal(0, damagePerHit, monster)
-                    }.asGroupedActions()
+                    }.asGroupedAction()
                 } else {
                     List(cardHitCount) {
                         Action.DamageNormal(damagePerHit, monster)
-                    }.asGroupedActions()
+                    }.asGroupedAction()
                 }
             }
 
