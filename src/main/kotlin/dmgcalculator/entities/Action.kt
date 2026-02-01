@@ -27,6 +27,7 @@ sealed class Action(open val min: Int, open val max: Int) {
     data class LoseHP(val value: Int) : Action(value, value)
     data class GainHP(val value: Int) : Action(value, value)
     data class GainBlock(val value: Int) : Action(value, value)
+    data object RefineStats : Action(0, 0)
     data object NoAction : Action(0, 0)
 }
 
