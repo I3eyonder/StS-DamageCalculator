@@ -15,6 +15,7 @@ data class Outcome(
     var blocked: Int = 0,
     var adjustHP: Int = 0,
     var hasCurlUpPower: Boolean = false,
+    var pendingGainBlock: Int = 0,
 ) {
 
     val isDead: Boolean
@@ -36,6 +37,13 @@ fun Outcome.apply(
 
         is Action.GainBlock -> {
             remainBlock += action.value
+        }
+
+        Action.RefineStats -> {
+            if (pendingGainBlock > 0) {
+                remainBlock += pendingGainBlock
+                pendingGainBlock = 0
+            }
         }
 
         is Action.DamageNormal,
@@ -88,7 +96,7 @@ fun Outcome.apply(
             // Apply Curl Up power
             if (damage > 0 && action is Action.DamageNormal && hasCurlUpPower) {
                 val curlUpPower = creatureInfo.creature.getPower(CurlUpPower.POWER_ID)
-                remainBlock += curlUpPower.amount
+                pendingGainBlock += curlUpPower.amount
                 hasCurlUpPower = false
             }
 

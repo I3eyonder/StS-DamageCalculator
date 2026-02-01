@@ -126,9 +126,9 @@ fun AbstractCard.getIntentActions(
             }
             (monsterExtraActions + playerExtraActions).let { extraActions ->
                 if (extraActions.isEmpty()) {
-                    action
+                    listOf(action, Action.RefineStats).asGroupedAction()
                 } else {
-                    listOf(action).plus(extraActions).asGroupedAction()
+                    listOf(action).plus(extraActions).plus(Action.RefineStats).asGroupedAction()
                 }
             }
         }
