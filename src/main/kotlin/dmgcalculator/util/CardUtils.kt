@@ -88,22 +88,37 @@ fun AbstractCard.getIntentActions(
     val baseAction = createIntentAction(monster, monsterIndex, aliveMonsterCount)
     val actions = mutableListOf(baseAction)
     val player = AbstractDungeon.player
+
     // Apply powers that modify action here if needed
+    fun createExtraAttackAction() = if (canGiveVulnearable && !monster.hasPower(VulnerablePower.POWER_ID)) {
+        val tmpCard = makeSameInstanceOf()
+        monster.applyTemporaryPower(VulnerablePower(monster, 1, false)) {
+            tmpCard.createIntentAction(monster, monsterIndex, aliveMonsterCount)
+        }
+    } else {
+        baseAction
+    }
+
     player.powers.forEach { power ->
         when (power.ID) {
             DoubleTapPower.POWER_ID, DuplicationPower.POWER_ID -> {
                 if (type == AbstractCard.CardType.ATTACK) {
-                    val extraAction = if (canGiveVulnearable && !monster.hasPower(VulnerablePower.POWER_ID)) {
-                        val tmpCard = makeSameInstanceOf()
-                        monster.applyTemporaryPower(VulnerablePower(monster, 1, false)) {
-                            tmpCard.createIntentAction(monster, monsterIndex, aliveMonsterCount)
-                        }
-                    } else {
-                        baseAction
-                    }
-                    actions.addToBottom(extraAction)
+                    actions.addToBottom(createExtraAttackAction())
                 } else if (power.ID == DuplicationPower.POWER_ID) {
                     actions.addToBottom(baseAction)
+                }
+            }
+
+            EchoPower.POWER_ID -> {
+                val cardsDoubledThisTurn = power.getPrivateField<Int>("cardsDoubledThisTurn") ?: 0
+                if (power.amount > 0 &&
+                    AbstractDungeon.actionManager.cardsPlayedThisTurn.size + 1 - cardsDoubledThisTurn <= power.amount
+                ) {
+                    if (type == AbstractCard.CardType.ATTACK) {
+                        actions.addToBottom(createExtraAttackAction())
+                    } else {
+                        actions.addToBottom(baseAction)
+                    }
                 }
             }
         }
