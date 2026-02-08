@@ -22,7 +22,7 @@ object PlayerRenderer {
 
     fun render(sb: SpriteBatch, hoveredCard: AbstractCard?, isPlayerTurn: Boolean) {
         val msg = if (isPlayerTurn) {
-            getIncomingActions(hoveredCard).calculateOutcome(
+            getIntentActions(hoveredCard).calculateOutcome(
                 CreatureInfo(AbstractDungeon.player)
             ).let { (worstOutcome, bestOutcome) ->
                 buildString {
@@ -44,10 +44,13 @@ object PlayerRenderer {
         }
     }
 
-    private fun getIncomingActions(hoveredCard: AbstractCard?): List<Action> {
+    private fun getIntentActions(hoveredCard: AbstractCard?): List<Action> {
         //Resolve card actions
-        val cardActions = hoveredCard?.let {
-            buildList<Action> {
+        val cardActions = hoveredCard?.let { hoveringCard ->
+            buildList {
+                if (hoveringCard.block > 0) {
+                    addToBottom(Action.GainBlock(hoveringCard.block))
+                }
             }
         } ?: emptyList()
 
