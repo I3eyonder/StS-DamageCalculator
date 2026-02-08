@@ -1,7 +1,10 @@
 package dmgcalculator.entities
 
 import com.megacrit.cardcrawl.characters.AbstractPlayer
+import com.megacrit.cardcrawl.dungeons.AbstractDungeon
+import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.powers.CurlUpPower
+import com.megacrit.cardcrawl.relics.Boot
 import com.megacrit.cardcrawl.relics.Torii
 import com.megacrit.cardcrawl.relics.TungstenRod
 import dmgcalculator.util.Utils.getBlockedAmount
@@ -87,6 +90,18 @@ fun Outcome.apply(
                         Torii.ID -> {
                             if (action !is Action.LoseHP && action !is Action.DamageThorns && damage in 2..5) {
                                 damage = 1
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (creatureInfo.creature is AbstractMonster) {
+                AbstractDungeon.player.relics.forEach { relic ->
+                    when (relic.relicId) {
+                        Boot.ID -> {
+                            if (action !is Action.LoseHP && action !is Action.DamageThorns && damage in 1..4) {
+                                damage = 5
                             }
                         }
                     }
