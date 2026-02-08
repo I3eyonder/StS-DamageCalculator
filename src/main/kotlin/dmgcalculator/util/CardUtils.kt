@@ -15,6 +15,7 @@ import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.orbs.Lightning
 import com.megacrit.cardcrawl.powers.*
+import com.megacrit.cardcrawl.powers.watcher.VigorPower
 import com.megacrit.cardcrawl.relics.ChemicalX
 import com.megacrit.cardcrawl.ui.panels.EnergyPanel
 import dmgcalculator.entities.Action
@@ -90,13 +91,26 @@ fun AbstractCard.getIntentActions(
     val player = AbstractDungeon.player
 
     // Apply powers that modify action here if needed
-    fun createExtraAttackAction() = if (canGiveVulnearable && !monster.hasPower(VulnerablePower.POWER_ID)) {
-        val tmpCard = makeSameInstanceOf()
-        monster.applyTemporaryPower(VulnerablePower(monster, 1, false)) {
-            tmpCard.createIntentAction(monster, monsterIndex, aliveMonsterCount)
+    fun createExtraAttackAction(): Action {
+        val monsterTemporayPowers = buildList {
+            if (canGiveVulnearable && !monster.hasPower(VulnerablePower.POWER_ID)) {
+                add(VulnerablePower(monster, 1, false))
+            }
         }
-    } else {
-        baseAction
+        val playerTemporaryRemoveAmountPowers = buildList {
+            if (player.hasPower(VigorPower.POWER_ID)) {
+                add(VigorPower.POWER_ID)
+            }
+        }
+        return if (monsterTemporayPowers.isNotEmpty() || playerTemporaryRemoveAmountPowers.isNotEmpty()) {
+            monster.applyTemporaryPowers(monsterTemporayPowers) {
+                player.temporaryRemoveAmountFromPowers(playerTemporaryRemoveAmountPowers) {
+                    createIntentAction(monster, monsterIndex, aliveMonsterCount)
+                }
+            }
+        } else {
+            baseAction
+        }
     }
 
     player.powers.forEach { power ->

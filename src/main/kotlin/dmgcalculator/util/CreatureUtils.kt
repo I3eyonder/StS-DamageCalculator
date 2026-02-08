@@ -98,15 +98,58 @@ fun AbstractPlayer.getEndTurnIntentActions(): List<Action> = buildList {
     }
 }
 
-fun <T> AbstractCreature.applyTemporaryPower(power: AbstractPower, block: () -> T): T = if (!hasPower(power.ID)) {
-    addPower(power)
-    block().also {
-        powers.remove(power)
+fun <T> AbstractCreature.temporaryRemoveAmountFromPowers(
+    vararg powerIds: String,
+    block: AbstractCreature.() -> T,
+) = temporaryRemoveAmountFromPowers(powerIds.toList(), block)
+
+fun <T> AbstractCreature.temporaryRemoveAmountFromPowers(
+    powerIds: List<String>,
+    block: AbstractCreature.() -> T,
+): T {
+    return powers.mapNotNull { power ->
+        if (power.ID in powerIds) {
+            val originalAmount = power.amount
+            power.amount = 0
+            power to originalAmount
+        } else {
+            null
+        }
+    }.let { modifiedPowers ->
+        block().also {
+            modifiedPowers.forEach { (power, originalAmount) ->
+                power.amount = originalAmount
+            }
+        }
     }
-} else {
-    addPower(power)
-    block().also {
-        power.amount = power.amount.unaryMinus()
+}
+
+fun <T> AbstractCreature.applyTemporaryPowers(
+    vararg temporaryPowers: AbstractPower,
+    block: AbstractCreature.() -> T,
+): T = applyTemporaryPowers(temporaryPowers.toList(), block)
+
+fun <T> AbstractCreature.applyTemporaryPowers(
+    temporaryPowers: List<AbstractPower>,
+    block: AbstractCreature.() -> T,
+): T {
+    val powersToRemove = mutableListOf<AbstractPower>()
+    val powersToReduceAmount = mutableListOf<AbstractPower>()
+    temporaryPowers.forEach { power ->
+        if (!hasPower(power.ID)) {
+            powersToRemove.add(power)
+        } else {
+            powersToReduceAmount.add(power)
+        }
         addPower(power)
+    }
+    return block().also {
+        powersToRemove.forEach { power ->
+            powers.remove(power)
+        }
+        powersToReduceAmount.forEach { power ->
+            power.amount = power.amount.unaryMinus()
+            addPower(power)
+        }
     }
 }
