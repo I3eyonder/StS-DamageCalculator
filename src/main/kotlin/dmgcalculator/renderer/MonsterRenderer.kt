@@ -6,6 +6,7 @@ import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.VigorPower
+import com.megacrit.cardcrawl.relics.LetterOpener
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addToBottom
@@ -160,6 +161,25 @@ object MonsterRenderer {
             }
         }
 
+        // Apply LetterOpener relic if needed
+        player.getRelic(LetterOpener.ID)?.let { letterOpenerRelic ->
+            var counter = letterOpenerRelic.counter
+            if (type == AbstractCard.CardType.SKILL) {
+                actions.replacesWith { originActions ->
+                    originActions.map { action ->
+                        counter++
+                        if (counter % 3 == 0) {
+                            counter = 0
+                            // insert an extra action when countdown reaches zero, then reset to 5
+                            listOf(action, Action.DamageThorns(5)).asGroupedAction()
+                        } else {
+                            action
+                        }
+                    }
+                }
+            }
+        }
+
         // Apply monster debuff and player buff if needed
         actions.replacesWith { originActions ->
             originActions.map { action ->
@@ -192,15 +212,14 @@ object MonsterRenderer {
                 var remaining = panachePower.amount
                 val panacheDamage = panachePower.getPrivateField<Int>("damage")!!
                 actions.replacesWith { originActions ->
-                    buildList {
-                        for (action in originActions) {
-                            add(action)
-                            remaining--
-                            if (remaining == 0) {
-                                // insert an extra action when countdown reaches zero, then reset to 5
-                                add(Action.DamageThorns(panacheDamage))
-                                remaining = PanachePower.CARD_AMT
-                            }
+                    originActions.map { action ->
+                        remaining--
+                        if (remaining == 0) {
+                            remaining = PanachePower.CARD_AMT
+                            // insert an extra action when countdown reaches zero, then reset to 5
+                            listOf(action, Action.DamageThorns(panacheDamage)).asGroupedAction()
+                        } else {
+                            action
                         }
                     }
                 }
