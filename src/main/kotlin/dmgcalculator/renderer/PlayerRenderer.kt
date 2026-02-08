@@ -1,6 +1,7 @@
 package dmgcalculator.renderer
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.status.Burn
@@ -19,14 +20,9 @@ object PlayerRenderer {
 
     private var cachedMsg: String? = null
 
-    fun render(sb: SpriteBatch, isPlayerTurn: Boolean) {
-        if (AbstractDungeon.isScreenUp) return
-        if (AbstractDungeon.getCurrMapNode() == null) return
-        if (AbstractDungeon.getMonsters() == null) return
-        if (AbstractDungeon.player == null) return
-
+    fun render(sb: SpriteBatch, hoveredCard: AbstractCard?, isPlayerTurn: Boolean) {
         val msg = if (isPlayerTurn) {
-            getIncomingActions().calculateOutcome(
+            getIncomingActions(hoveredCard).calculateOutcome(
                 CreatureInfo(AbstractDungeon.player)
             ).let { (worstOutcome, bestOutcome) ->
                 buildString {
@@ -48,7 +44,13 @@ object PlayerRenderer {
         }
     }
 
-    private fun getIncomingActions(): List<Action> {
+    private fun getIncomingActions(hoveredCard: AbstractCard?): List<Action> {
+        //Resolve card actions
+        val cardActions = hoveredCard?.let {
+            buildList<Action> {
+            }
+        } ?: emptyList()
+
         // Resolve relics
         val relicEffect = buildList {
             AbstractDungeon.player.relics.forEach { relic ->
@@ -108,7 +110,7 @@ object PlayerRenderer {
         // Resolve monster attack intent
         val monsterAttackIntentActions = AbstractDungeon.getMonsters().aliveMonsters.getAttackIntentActions()
 
-        return relicEffect + powerPreHandEffects + handDamageActions + powerAfterHandEffects + monsterAttackIntentActions
+        return cardActions + relicEffect + powerPreHandEffects + handDamageActions + powerAfterHandEffects + monsterAttackIntentActions
     }
 
 }

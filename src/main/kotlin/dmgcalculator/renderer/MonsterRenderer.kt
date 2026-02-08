@@ -1,20 +1,20 @@
 package dmgcalculator.renderer
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
+import com.megacrit.cardcrawl.monsters.AbstractMonster
+import com.megacrit.cardcrawl.powers.*
+import com.megacrit.cardcrawl.powers.watcher.VigorPower
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
+import dmgcalculator.util.Utils.addToBottom
+import dmgcalculator.util.Utils.replacesWith
 
 object MonsterRenderer {
 
-    fun render(sb: SpriteBatch) {
-        if (AbstractDungeon.isScreenUp) return
-        if (AbstractDungeon.getCurrMapNode() == null) return
-
+    fun render(sb: SpriteBatch, hoveredCard: AbstractCard?) {
         val player = AbstractDungeon.player
-        val hoveringCard = player.hoveredCard?.makeStatEquivalentCopy()?.apply {
-            applyPowers()
-        }
         val hoveredMonster = player.getHoveredMonster()
         val aliveMonstersIndexed = AbstractDungeon.getMonsters().aliveMonstersIndexed
         val aliveMonsterCount = aliveMonstersIndexed.size
@@ -23,7 +23,7 @@ object MonsterRenderer {
         aliveMonstersIndexed.forEach { (index, monster) ->
             msgBuilder.clear()
             val creatureInfo = CreatureInfo(monster)
-            val (worstCardOutcome, bestCardOutcome) = hoveringCard?.getIntentActions(monster, index, aliveMonsterCount)
+            val (worstCardOutcome, bestCardOutcome) = hoveredCard?.getIntentActions(monster, index, aliveMonsterCount)
                 ?.run {
                     if (hoveredMonster != null) {
                         this.filter { action ->
@@ -103,80 +103,146 @@ object MonsterRenderer {
         }
     }
 
-    private fun buildMessage(
-        msgBuilder: StringBuilder,
-        worstOutcome: Outcome,
-        bestOutcome: Outcome,
-        showRemainHP: Boolean,
-    ) {
-        // --- Deal damage ---
-        msgBuilder.append(
-            "Take %s damage".format(
-                Range(worstOutcome.damage, bestOutcome.damage).sorted().colored("#FF0000")
-            )
-        )
+    private fun AbstractCard.getIntentActions(
+        monster: AbstractMonster,
+        monsterIndex: Int,
+        aliveMonsterCount: Int,
+    ): List<Action> {
+        val baseAction = createIntentAction(monster, monsterIndex, aliveMonsterCount)
+        val actions = mutableListOf(baseAction)
+        val player = AbstractDungeon.player
 
-        // --- Blocked amount ---
-        if (worstOutcome.blocked == bestOutcome.blocked) {
-            if (bestOutcome.blocked > 0) {
-                msgBuilder.append("\n")
-                    .append(
-                        "(%s blocked)".format(
-                            bestOutcome.blocked.toString().colored("#00FF00")
-                        )
-                    )
+        // Apply powers that modify action here if needed
+        fun createExtraAttackAction(): Action {
+            val monsterTemporayPowers = buildList {
+                if (canGiveVulnearable && !monster.hasPower(VulnerablePower.POWER_ID)) {
+                    add(VulnerablePower(monster, 1, false))
+                }
             }
-        } else {
-            msgBuilder
-                .append("\n").append(
-                    "(%s blocked)".format(
-                        Range(worstOutcome.blocked, bestOutcome.blocked).sorted().colored("#00FF00")
-                    )
-                )
-        }
-
-        // --- Extra info ---
-        if (worstOutcome.adjustHP == bestOutcome.adjustHP) {
-            if (bestOutcome.adjustHP < 0) {
-                msgBuilder.append("\n")
-                    .append(
-                        "Lose extra %s HP".format(
-                            bestOutcome.adjustHP.unaryMinus().toString().colored("#FF0000")
-                        )
-                    )
-            } else if (bestOutcome.adjustHP > 0) {
-                msgBuilder.append("\n")
-                    .append(
-                        "Gain extra %s HP".format(
-                            bestOutcome.adjustHP.toString().colored("#00FF00")
-                        )
-                    )
+            val playerTemporaryRemoveAmountPowers = buildList {
+                if (player.hasPower(VigorPower.POWER_ID)) {
+                    add(VigorPower.POWER_ID)
+                }
             }
-        }
-
-        // --- Remaining HP ---
-        if (showRemainHP) {
-            if (worstOutcome.remainHP == bestOutcome.remainHP) {
-                if (bestOutcome.isDead) {
-                    msgBuilder.append("\n")
-                        .append("DEAD".colored("#FF0000"))
-                } else {
-                    msgBuilder.append("\n")
-                        .append(
-                            "%s HP remains".format(
-                                bestOutcome.remainHP.toString().colored("#00BFFF")
-                            )
-                        )
+            return if (monsterTemporayPowers.isNotEmpty() || playerTemporaryRemoveAmountPowers.isNotEmpty()) {
+                monster.applyTemporaryPowers(monsterTemporayPowers) {
+                    player.temporaryRemoveAmountFromPowers(playerTemporaryRemoveAmountPowers) {
+                        createIntentAction(monster, monsterIndex, aliveMonsterCount)
+                    }
                 }
             } else {
-                msgBuilder.append("\n")
-                    .append(
-                        "%s HP remains".format(
-                            Range(worstOutcome.remainHP, bestOutcome.remainHP).sorted()
-                                .colored("#00BFFF", reversed = true)
-                        )
-                    )
+                baseAction
             }
+        }
+
+        player.powers.forEach { power ->
+            when (power.ID) {
+                DoubleTapPower.POWER_ID, DuplicationPower.POWER_ID -> {
+                    if (type == AbstractCard.CardType.ATTACK) {
+                        actions.addToBottom(createExtraAttackAction())
+                    } else if (power.ID == DuplicationPower.POWER_ID) {
+                        actions.addToBottom(baseAction)
+                    }
+                }
+
+                EchoPower.POWER_ID -> {
+                    val cardsDoubledThisTurn = power.getPrivateField<Int>("cardsDoubledThisTurn") ?: 0
+                    if (power.amount > 0 &&
+                        AbstractDungeon.actionManager.cardsPlayedThisTurn.size + 1 - cardsDoubledThisTurn <= power.amount
+                    ) {
+                        if (type == AbstractCard.CardType.ATTACK) {
+                            actions.addToBottom(createExtraAttackAction())
+                        } else {
+                            actions.addToBottom(baseAction)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Apply monster debuff and player buff if needed
+        actions.replacesWith { originActions ->
+            originActions.map { action ->
+                val monsterExtraActions = monster.powers.mapNotNull { power ->
+                    when (power.ID) {
+                        ChokePower.POWER_ID -> Action.LoseHP(power.amount)
+                        else -> null
+                    }
+                }
+                val playerExtraActions = player.powers.mapNotNull { power ->
+                    when (power.ID) {
+                        ThousandCutsPower.POWER_ID -> Action.DamageThorns(power.amount)
+                        else -> null
+                    }
+                }
+                (monsterExtraActions + playerExtraActions).let { extraActions ->
+                    if (extraActions.isEmpty()) {
+                        listOf(action, Action.RefineStats).asGroupedAction()
+                    } else {
+                        listOf(action).plus(extraActions).plus(Action.RefineStats).asGroupedAction()
+                    }
+                }
+            }
+        }
+
+        // Apply Panache if needed
+        player.getPower(PanachePower.POWER_ID)?.let { panachePower ->
+            try {
+                // panache.amount is counted down from 5 (remaining actions until next extra)
+                var remaining = panachePower.amount
+                val panacheDamage = panachePower.getPrivateField<Int>("damage")!!
+                actions.replacesWith { originActions ->
+                    buildList {
+                        for (action in originActions) {
+                            add(action)
+                            remaining--
+                            if (remaining == 0) {
+                                // insert an extra action when countdown reaches zero, then reset to 5
+                                add(Action.DamageThorns(panacheDamage))
+                                remaining = PanachePower.CARD_AMT
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                // ignore errors and do nothing
+            }
+        }
+        return actions.flatten()
+    }
+
+    private fun AbstractCard.createIntentAction(
+        monster: AbstractMonster,
+        monsterIndex: Int,
+        aliveMonsterCount: Int,
+    ): Action {
+        return if (type == AbstractCard.CardType.ATTACK) {
+            calculateCardDamage(monster)
+            val damagePerHit = getDamagePerHit(monsterIndex)
+            val cardHitCount = getHitCount()
+            when {
+                cardHitCount > 1 -> {
+                    if (isRandomAttackCard && aliveMonsterCount > 1) {
+                        List(cardHitCount) {
+                            Action.DamageNormal(0, damagePerHit, monster)
+                        }.asGroupedAction()
+                    } else {
+                        List(cardHitCount) {
+                            Action.DamageNormal(damagePerHit, monster)
+                        }.asGroupedAction()
+                    }
+                }
+
+                cardHitCount == 1 -> {
+                    Action.DamageNormal(damagePerHit, monster)
+                }
+
+                else -> {
+                    Action.NoAction
+                }
+            }
+        } else {
+            Action.NoAction
         }
     }
 }

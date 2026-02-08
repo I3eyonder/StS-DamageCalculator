@@ -12,6 +12,7 @@ import com.evacipated.cardcrawl.modthespire.Loader
 import com.evacipated.cardcrawl.modthespire.ModInfo
 import com.evacipated.cardcrawl.modthespire.Patcher
 import com.evacipated.cardcrawl.modthespire.lib.SpireInitializer
+import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import dmgcalculator.interfaces.PlayerEndTurnSubscriber
 import dmgcalculator.publisher.PlayerEndTurnPublisher
 import dmgcalculator.renderer.MonsterRenderer
@@ -36,9 +37,16 @@ class DmgCalculatorMod : PostInitializeSubscriber,
     }
 
     override fun receivePostRender(spriteBatch: SpriteBatch?) {
+        if (AbstractDungeon.isScreenUp) return
+        if (AbstractDungeon.getCurrMapNode() == null) return
+        if (AbstractDungeon.getMonsters() == null) return
+        if (AbstractDungeon.player == null) return
         spriteBatch?.let {
-            PlayerRenderer.render(it, isPlayerTurn)
-            MonsterRenderer.render(it)
+            val hoveredCard = AbstractDungeon.player.hoveredCard?.makeStatEquivalentCopy()?.apply {
+                applyPowers()
+            }
+            PlayerRenderer.render(it, hoveredCard, isPlayerTurn)
+            MonsterRenderer.render(it, hoveredCard)
         }
     }
 
