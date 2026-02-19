@@ -114,7 +114,7 @@ object MonsterRenderer {
         val player = AbstractDungeon.player
 
         // Apply powers that modify action here if needed
-        fun createExtraAttackAction(): Action {
+        fun createDuplicationAttackAction(): Action {
             val monsterTemporayPowers = buildList {
                 if (canGiveVulnearable && !monster.hasPower(VulnerablePower.POWER_ID)) {
                     add(VulnerablePower(monster, 1, false))
@@ -140,7 +140,7 @@ object MonsterRenderer {
             when (power.ID) {
                 DoubleTapPower.POWER_ID, DuplicationPower.POWER_ID -> {
                     if (type == AbstractCard.CardType.ATTACK) {
-                        actions.addToBottom(createExtraAttackAction())
+                        actions.addToBottom(createDuplicationAttackAction())
                     } else if (power.ID == DuplicationPower.POWER_ID) {
                         actions.addToBottom(baseAction)
                     }
@@ -152,7 +152,7 @@ object MonsterRenderer {
                         AbstractDungeon.actionManager.cardsPlayedThisTurn.size + 1 - cardsDoubledThisTurn <= power.amount
                     ) {
                         if (type == AbstractCard.CardType.ATTACK) {
-                            actions.addToBottom(createExtraAttackAction())
+                            actions.addToBottom(createDuplicationAttackAction())
                         } else {
                             actions.addToBottom(baseAction)
                         }

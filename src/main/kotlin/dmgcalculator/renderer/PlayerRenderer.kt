@@ -12,7 +12,9 @@ import com.megacrit.cardcrawl.relics.Orichalcum
 import com.megacrit.cardcrawl.relics.OrnamentalFan
 import dmgcalculator.entities.Action
 import dmgcalculator.entities.CreatureInfo
+import dmgcalculator.entities.asGroupedAction
 import dmgcalculator.entities.calculateOutcome
+import dmgcalculator.entities.flatten
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addToBottom
 import dmgcalculator.util.Utils.addToTop
@@ -48,11 +50,35 @@ object PlayerRenderer {
     private fun getIntentActions(hoveredCard: AbstractCard?): List<Action> {
         //Resolve card actions
         val cardActions = hoveredCard?.let { hoveringCard ->
-            buildList {
+            val baseAction = buildList {
                 if (hoveringCard.block > 0) {
                     addToBottom(Action.GainBlock(hoveringCard.block))
                 }
+            }.asGroupedAction()
+            val actions = mutableListOf(baseAction)
+            AbstractDungeon.player.powers.forEach { power ->
+                when (power.ID) {
+                    DoubleTapPower.POWER_ID -> {
+                        if (hoveringCard.type == AbstractCard.CardType.ATTACK) {
+                            actions.addToBottom(baseAction)
+                        }
+                    }
+
+                    DuplicationPower.POWER_ID -> {
+                        actions.addToBottom(baseAction)
+                    }
+
+                    EchoPower.POWER_ID -> {
+                        val cardsDoubledThisTurn = power.getPrivateField<Int>("cardsDoubledThisTurn") ?: 0
+                        if (power.amount > 0 &&
+                            AbstractDungeon.actionManager.cardsPlayedThisTurn.size + 1 - cardsDoubledThisTurn <= power.amount
+                        ) {
+                            actions.addToBottom(baseAction)
+                        }
+                    }
+                }
             }
+            actions.toList()
         } ?: emptyList()
 
         // Resolve relics
@@ -120,7 +146,7 @@ object PlayerRenderer {
         // Resolve monster attack intent
         val monsterAttackIntentActions = AbstractDungeon.getMonsters().aliveMonsters.getAttackIntentActions()
 
-        return cardActions + relicEffect + powerPreHandEffects + handDamageActions + powerAfterHandEffects + monsterAttackIntentActions
+        return (cardActions + relicEffect + powerPreHandEffects + handDamageActions + powerAfterHandEffects + monsterAttackIntentActions).flatten()
     }
 
 }
