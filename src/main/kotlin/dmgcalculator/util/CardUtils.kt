@@ -2,9 +2,14 @@ package dmgcalculator.util
 
 import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.blue.BeamCell
+import com.megacrit.cardcrawl.cards.blue.MultiCast
+import com.megacrit.cardcrawl.cards.blue.ReinforcedBody
 import com.megacrit.cardcrawl.cards.blue.RipAndTear
+import com.megacrit.cardcrawl.cards.blue.Tempest
 import com.megacrit.cardcrawl.cards.blue.ThunderStrike
+import com.megacrit.cardcrawl.cards.colorless.Transmutation
 import com.megacrit.cardcrawl.cards.green.*
+import com.megacrit.cardcrawl.cards.purple.Collect
 import com.megacrit.cardcrawl.cards.purple.CrushJoints
 import com.megacrit.cardcrawl.cards.purple.Indignation
 import com.megacrit.cardcrawl.cards.purple.Ragnarok
@@ -43,8 +48,13 @@ val AbstractCard.canGiveVulnearable: Boolean
 fun AbstractCard.getHitCount(): Int = when (cardID) {
     TwinStrike.ID -> 2
     RiddleWithHoles.ID -> 5
-    Pummel.ID, Tantrum.ID, SwordBoomerang.ID, Ragnarok.ID, RipAndTear.ID -> magicNumber
-    Whirlwind.ID, Skewer.ID, Expunger.ID -> {
+    Pummel.ID, Tantrum.ID, SwordBoomerang.ID, Ragnarok.ID,
+    RipAndTear.ID, Expunger.ID,
+        -> magicNumber
+
+    Whirlwind.ID, Skewer.ID, ReinforcedBody.ID, Malaise.ID,
+    Doppelganger.ID, Tempest.ID, MultiCast.ID, Collect.ID, Transmutation.ID,
+        -> {
         var hits = EnergyPanel.totalCount
         if (AbstractDungeon.player.hasRelic(ChemicalX.ID)) {
             hits += 2
