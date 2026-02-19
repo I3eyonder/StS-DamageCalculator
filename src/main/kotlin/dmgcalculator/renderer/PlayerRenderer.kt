@@ -9,6 +9,7 @@ import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.relics.CloakClasp
 import com.megacrit.cardcrawl.relics.Orichalcum
+import com.megacrit.cardcrawl.relics.OrnamentalFan
 import dmgcalculator.entities.Action
 import dmgcalculator.entities.CreatureInfo
 import dmgcalculator.entities.calculateOutcome
@@ -67,6 +68,12 @@ object PlayerRenderer {
                     CloakClasp.ID -> {
                         if (!AbstractDungeon.player.hand.group.isEmpty()) {
                             addToBottom(Action.GainBlock(AbstractDungeon.player.hand.group.size))
+                        }
+                    }
+
+                    OrnamentalFan.ID -> {
+                        if (hoveredCard?.type == AbstractCard.CardType.ATTACK && (relic.counter + 1) % 3 == 0) {
+                            addToBottom(Action.GainBlock(4))
                         }
                     }
                 }
