@@ -33,6 +33,7 @@ sealed class Action(open val min: Int, open val max: Int) {
 
 sealed interface ActionTarget {
     data class Single(val target: AbstractCreature) : ActionTarget
+    data object Random : ActionTarget
     data object All : ActionTarget
     data object None : ActionTarget
 }

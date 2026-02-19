@@ -6,10 +6,14 @@ import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.monsters.MonsterGroup
 import com.megacrit.cardcrawl.powers.AbstractPower
 import com.megacrit.cardcrawl.powers.CombustPower
+import com.megacrit.cardcrawl.powers.JuggernautPower
 import com.megacrit.cardcrawl.powers.TheBombPower
 import com.megacrit.cardcrawl.powers.watcher.OmegaPower
+import com.megacrit.cardcrawl.relics.CloakClasp
+import com.megacrit.cardcrawl.relics.Orichalcum
 import com.megacrit.cardcrawl.relics.StoneCalendar
 import dmgcalculator.entities.Action
+import dmgcalculator.entities.ActionTarget
 import dmgcalculator.util.Utils.addToBottom
 import dmgcalculator.util.Utils.isAttackingIntent
 
@@ -66,10 +70,25 @@ fun AbstractCreature.hasEndTurnDamage(): Boolean {
     }
     if (hasEndTurnDamagePower) return true
 
-    // Check Stone Calendar (players only)
+    // Check Relics damage (players only)
     if (this is AbstractPlayer) {
-        val relic = getRelic(StoneCalendar.ID)
-        if (relic?.counter == 7) return true
+        relics.forEach { relic ->
+            when (relic.relicId) {
+                StoneCalendar.ID -> {
+                    if (relic.counter == 7) return true
+                }
+
+                Orichalcum.ID -> {
+                    if (currentBlock == 0 || (relic as Orichalcum).trigger)
+                        if (hasPower(JuggernautPower.POWER_ID)) return true
+                }
+
+                CloakClasp.ID -> {
+                    if (hand.group.isNotEmpty())
+                        if (hasPower(JuggernautPower.POWER_ID)) return true
+                }
+            }
+        }
     }
 
     return false
@@ -79,10 +98,64 @@ fun AbstractPlayer.getHoveredMonster(): AbstractMonster? {
     return getPrivateField("hoveredMonster")
 }
 
-fun AbstractPlayer.getEndTurnIntentActions(): List<Action> = buildList {
+fun AbstractPlayer.getEndTurnIntentActions(
+    aliveMonsterCount: Int,
+): List<Action> = buildList {
     // relics damage
-    if (getRelic(StoneCalendar.ID)?.counter == 7) {
-        addToBottom(Action.DamageThorns(52))
+    relics.forEach { relic ->
+        when (relic.relicId) {
+            StoneCalendar.ID -> {
+                if (relic.counter == 7) {
+                    addToBottom(Action.DamageThorns(52))
+                }
+            }
+
+            Orichalcum.ID -> {
+                if (currentBlock == 0 || (relic as Orichalcum).trigger)
+                    if (hasPower(JuggernautPower.POWER_ID)) {
+                        val juggernautPower = getPower(JuggernautPower.POWER_ID)
+                        if (aliveMonsterCount > 1) {
+                            addToBottom(
+                                Action.DamageThorns(
+                                    0,
+                                    juggernautPower.amount,
+                                    ActionTarget.Random
+                                )
+                            )
+                        } else {
+                            addToBottom(
+                                Action.DamageThorns(
+                                    juggernautPower.amount,
+                                    ActionTarget.All
+                                )
+                            )
+                        }
+                    }
+            }
+
+            CloakClasp.ID -> {
+                if (hand.group.isNotEmpty())
+                    if (hasPower(JuggernautPower.POWER_ID)) {
+                        val juggernautPower = getPower(JuggernautPower.POWER_ID)
+                        if (aliveMonsterCount > 1) {
+                            addToBottom(
+                                Action.DamageThorns(
+                                    0,
+                                    juggernautPower.amount,
+                                    ActionTarget.Random
+                                )
+                            )
+                        } else {
+                            addToBottom(
+                                Action.DamageThorns(
+                                    juggernautPower.amount,
+                                    ActionTarget.All
+                                )
+                            )
+                        }
+                    }
+            }
+        }
     }
 
     // powers damage

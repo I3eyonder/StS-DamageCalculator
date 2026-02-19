@@ -63,7 +63,7 @@ object MonsterRenderer {
                     msgBuilder.append("\n")
                         .append("--End Turn--".colored("#FCBA03"))
                         .append("\n")
-                    val endTurnIntentActions = player.getEndTurnIntentActions()
+                    val endTurnIntentActions = player.getEndTurnIntentActions(aliveMonsterCount)
                     val worstEndTurnCalculatedOutcome = endTurnIntentActions.calculateWorstOutcome(
                         creatureInfo.copy(
                             remainHP = worstCardOutcome.remainHP,
@@ -88,7 +88,7 @@ object MonsterRenderer {
             } else if (player.hasEndTurnDamage()) {
                 msgBuilder.append("--End Turn--".colored("#FCBA03"))
                     .append("\n")
-                val endTurnIntentActions = player.getEndTurnIntentActions()
+                val endTurnIntentActions = player.getEndTurnIntentActions(aliveMonsterCount)
                 val (worstEndTurnOutcome, bestEndTurnOutcome) = endTurnIntentActions.calculateOutcome(
                     creatureInfo
                 )
@@ -109,9 +109,9 @@ object MonsterRenderer {
         monsterIndex: Int,
         aliveMonsterCount: Int,
     ): List<Action> {
+        val player = AbstractDungeon.player
         val baseAction = createIntentAction(monster, monsterIndex, aliveMonsterCount)
         val actions = mutableListOf(baseAction)
-        val player = AbstractDungeon.player
 
         // Apply powers that modify action here if needed
         fun createDuplicationAttackAction(): Action {
@@ -235,33 +235,70 @@ object MonsterRenderer {
         monsterIndex: Int,
         aliveMonsterCount: Int,
     ): Action {
-        return if (type == AbstractCard.CardType.ATTACK) {
-            calculateCardDamage(monster)
-            val damagePerHit = getDamagePerHit(monsterIndex)
-            val cardHitCount = getHitCount()
-            when {
-                cardHitCount > 1 -> {
-                    if (isRandomAttackCard && aliveMonsterCount > 1) {
-                        List(cardHitCount) {
-                            Action.DamageNormal(0, damagePerHit, monster)
-                        }.asGroupedAction()
-                    } else {
-                        List(cardHitCount) {
-                            Action.DamageNormal(damagePerHit, monster)
-                        }.asGroupedAction()
+        val player = AbstractDungeon.player
+        val cardHitCount = getHitCount()
+        calculateCardDamage(monster)
+        val damagePerHit = getDamagePerHit(monsterIndex)
+        return if (aliveMonsterCount > 1) {
+            List(cardHitCount) {
+                buildList {
+                    if (damagePerHit > 0) {
+                        if (isRandomAttackCard) {
+                            add(Action.DamageNormal(0, damagePerHit, ActionTarget.Random))
+                        } else {
+                            add(Action.DamageNormal(damagePerHit, monster))
+                        }
                     }
-                }
-
-                cardHitCount == 1 -> {
-                    Action.DamageNormal(damagePerHit, monster)
-                }
-
-                else -> {
-                    Action.NoAction
-                }
-            }
+                    if (player.hasPower(JuggernautPower.POWER_ID)) {
+                        val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
+                        if (type == AbstractCard.CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
+                            add(
+                                Action.DamageThorns(
+                                    0,
+                                    juggernautPower.amount,
+                                    ActionTarget.Random
+                                )
+                            )
+                        }
+                        if (block > 0) {
+                            add(
+                                Action.DamageThorns(
+                                    0,
+                                    juggernautPower.amount,
+                                    ActionTarget.Random
+                                )
+                            )
+                        }
+                    }
+                }.asGroupedAction()
+            }.asGroupedAction()
         } else {
-            Action.NoAction
+            List(cardHitCount) {
+                buildList {
+                    if (damagePerHit > 0) {
+                        add(Action.DamageNormal(damagePerHit, monster))
+                    }
+                    if (player.hasPower(JuggernautPower.POWER_ID)) {
+                        val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
+                        if (type == AbstractCard.CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
+                            add(
+                                Action.DamageThorns(
+                                    juggernautPower.amount,
+                                    ActionTarget.Single(monster)
+                                )
+                            )
+                        }
+                        if (block > 0) {
+                            add(
+                                Action.DamageThorns(
+                                    juggernautPower.amount,
+                                    ActionTarget.Single(monster)
+                                )
+                            )
+                        }
+                    }
+                }.asGroupedAction()
+            }.asGroupedAction()
         }
     }
 }

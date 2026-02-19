@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Regret
+import com.megacrit.cardcrawl.cards.red.Rage
 import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.powers.*
@@ -47,14 +48,31 @@ object PlayerRenderer {
         }
     }
 
+    private fun AbstractCard.createIntentActions(): List<Action> = buildList {
+        val player = AbstractDungeon.player
+        if (type == AbstractCard.CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
+            add(Action.GainBlock((player.getPower(RagePower.POWER_ID).amount)))
+        }
+        if (block > 0) {
+            add(Action.GainBlock(block))
+        }
+    }
+
     private fun getIntentActions(hoveredCard: AbstractCard?): List<Action> {
         //Resolve card actions
         val cardActions = hoveredCard?.let { hoveringCard ->
-            val baseAction = buildList {
-                if (hoveringCard.block > 0) {
-                    addToBottom(Action.GainBlock(hoveringCard.block))
+            val cardHitCount = hoveringCard.getHitCount()
+            val baseAction = when {
+                cardHitCount > 1 -> {
+                    List(cardHitCount) {
+                        hoveringCard.createIntentActions().asGroupedAction()
+                    }.asGroupedAction()
                 }
-            }.asGroupedAction()
+
+                else -> {
+                    hoveringCard.createIntentActions().asGroupedAction()
+                }
+            }
             val actions = mutableListOf(baseAction)
             AbstractDungeon.player.powers.forEach { power ->
                 when (power.ID) {
