@@ -5,6 +5,7 @@ import com.megacrit.cardcrawl.powers.BufferPower
 import com.megacrit.cardcrawl.powers.CurlUpPower
 import com.megacrit.cardcrawl.powers.IntangiblePlayerPower
 import com.megacrit.cardcrawl.powers.IntangiblePower
+import com.megacrit.cardcrawl.powers.InvinciblePower
 
 data class CreatureInfo(
     val creature: AbstractCreature,
@@ -14,4 +15,5 @@ data class CreatureInfo(
     val hasCurlUpPower: Boolean = creature.hasPower(CurlUpPower.POWER_ID),
     val hasIntangiblePower: Boolean = creature.hasPower(IntangiblePower.POWER_ID),
     val hasIntangiblePlayerPower: Boolean = creature.hasPower(IntangiblePlayerPower.POWER_ID),
+    val invincibleAmount: Int = creature.getPower(InvinciblePower.POWER_ID)?.amount ?: -1,
 )

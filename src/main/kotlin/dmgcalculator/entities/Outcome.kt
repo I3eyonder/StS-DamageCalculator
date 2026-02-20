@@ -4,6 +4,7 @@ import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.powers.CurlUpPower
+import com.megacrit.cardcrawl.powers.InvinciblePower
 import com.megacrit.cardcrawl.relics.Boot
 import com.megacrit.cardcrawl.relics.Torii
 import com.megacrit.cardcrawl.relics.TungstenRod
@@ -19,6 +20,7 @@ data class Outcome(
     var adjustHP: Int = 0,
     var hasCurlUpPower: Boolean = false,
     var pendingGainBlock: Int = 0,
+    var invincibleAmount: Int = -1,
 ) {
 
     val isDead: Boolean
@@ -106,6 +108,12 @@ fun Outcome.apply(
                         }
                     }
                 }
+            }
+
+            // Apply Invincible power
+            if (damage > 0 && invincibleAmount >= 0) {
+                damage = damage.coerceAtMost(invincibleAmount)
+                invincibleAmount = (invincibleAmount - damage).coerceAtLeast(0)
             }
 
             // Apply Curl Up power

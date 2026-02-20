@@ -56,7 +56,8 @@ fun List<Action>.calculateWorstOutcome(creatureInfo: CreatureInfo): Outcome {
         remainHP = creatureInfo.remainHP,
         remainBlock = creatureInfo.remainBlock,
         remainBuffer = creatureInfo.remainBuffer,
-        hasCurlUpPower = creatureInfo.hasCurlUpPower
+        hasCurlUpPower = creatureInfo.hasCurlUpPower,
+        invincibleAmount = creatureInfo.invincibleAmount,
     ).also {
         forEach { action ->
             it.apply(action, false, creatureInfo)
@@ -69,7 +70,8 @@ fun List<Action>.calculateBestOutcome(creatureInfo: CreatureInfo): Outcome {
         remainHP = creatureInfo.remainHP,
         remainBlock = creatureInfo.remainBlock,
         remainBuffer = creatureInfo.remainBuffer,
-        hasCurlUpPower = creatureInfo.hasCurlUpPower
+        hasCurlUpPower = creatureInfo.hasCurlUpPower,
+        invincibleAmount = creatureInfo.invincibleAmount,
     ).also {
         forEach { action ->
             it.apply(action, true, creatureInfo)
