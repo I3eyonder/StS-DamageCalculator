@@ -1,32 +1,20 @@
 package dmgcalculator.util
 
 import com.megacrit.cardcrawl.cards.AbstractCard
-import com.megacrit.cardcrawl.cards.blue.BeamCell
-import com.megacrit.cardcrawl.cards.blue.GoForTheEyes
-import com.megacrit.cardcrawl.cards.blue.LockOn
-import com.megacrit.cardcrawl.cards.blue.MultiCast
-import com.megacrit.cardcrawl.cards.blue.ReinforcedBody
-import com.megacrit.cardcrawl.cards.blue.RipAndTear
-import com.megacrit.cardcrawl.cards.blue.Tempest
-import com.megacrit.cardcrawl.cards.blue.ThunderStrike
-import com.megacrit.cardcrawl.cards.colorless.Blind
-import com.megacrit.cardcrawl.cards.colorless.DarkShackles
-import com.megacrit.cardcrawl.cards.colorless.Transmutation
-import com.megacrit.cardcrawl.cards.colorless.Trip
+import com.megacrit.cardcrawl.cards.blue.*
+import com.megacrit.cardcrawl.cards.colorless.*
 import com.megacrit.cardcrawl.cards.green.*
-import com.megacrit.cardcrawl.cards.purple.Collect
-import com.megacrit.cardcrawl.cards.purple.CrushJoints
-import com.megacrit.cardcrawl.cards.purple.Indignation
-import com.megacrit.cardcrawl.cards.purple.PressurePoints
-import com.megacrit.cardcrawl.cards.purple.Ragnarok
-import com.megacrit.cardcrawl.cards.purple.SashWhip
-import com.megacrit.cardcrawl.cards.purple.Tantrum
+import com.megacrit.cardcrawl.cards.purple.*
 import com.megacrit.cardcrawl.cards.red.*
 import com.megacrit.cardcrawl.cards.tempCards.Expunger
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.orbs.Lightning
+import com.megacrit.cardcrawl.powers.CorruptionPower
+import com.megacrit.cardcrawl.powers.DarkEmbracePower
 import com.megacrit.cardcrawl.relics.ChemicalX
 import com.megacrit.cardcrawl.ui.panels.EnergyPanel
+import dmgcalculator.entities.ExhaustInfo
+import dmgcalculator.entities.SimpleCardInfo
 
 private val randomAttackCards = listOf(
     SwordBoomerang.ID,
@@ -96,6 +84,67 @@ fun AbstractCard.getDebuffInstanceCount(): Int = when {
     cardID == BouncingFlask.ID -> 3
     isDebuffCard -> 1
     else -> 0
+}
+
+fun AbstractCard.getExhaustInfo(hand: List<SimpleCardInfo>): ExhaustInfo {
+    val selfExhaust = when {
+        exhaust -> true
+        AbstractDungeon.player.hasPower(CorruptionPower.POWER_ID) && type == AbstractCard.CardType.SKILL -> true
+        else -> false
+    }
+    return when (cardID) {
+        Havoc.ID, Omniscience.ID -> ExhaustInfo(
+            selfExhaust = selfExhaust,
+            exhaustInDrawPile = 1,
+        )
+
+        Purity.ID -> ExhaustInfo(
+            selfExhaust = selfExhaust,
+            exhaustInHand = hand.filterNot {
+                it.isHovered
+            }.take(3)
+        )
+
+        Recycle.ID, TrueGrit.ID -> ExhaustInfo(
+            selfExhaust = selfExhaust,
+            exhaustInHand = hand.filterNot {
+                it.isHovered
+            }.take(1),
+        )
+
+        BurningPact.ID -> ExhaustInfo(
+            selfExhaust = selfExhaust,
+            exhaustInHand = hand.filterNot {
+                it.isHovered
+            }.take(1),
+            drawCard = magicNumber,
+        )
+
+        SecondWind.ID, SeverSoul.ID -> ExhaustInfo(
+            selfExhaust = selfExhaust,
+            exhaustInHand = hand.filter {
+                it.type != AbstractCard.CardType.ATTACK && !it.isHovered
+            },
+        )
+
+        FiendFire.ID -> ExhaustInfo(
+            selfExhaust = selfExhaust,
+            exhaustInHand = hand.filterNot {
+                it.isHovered
+            },
+        )
+
+        else -> ExhaustInfo(selfExhaust = selfExhaust)
+    }.let {
+        if (AbstractDungeon.player.hasPower(DarkEmbracePower.POWER_ID)) {
+            val darkEmbracePower = AbstractDungeon.player.getPower(DarkEmbracePower.POWER_ID)
+            it.copy(
+                drawCard = it.drawCard + it.totalExhaust * darkEmbracePower.amount,
+            )
+        } else {
+            it
+        }
+    }
 }
 
 fun AbstractCard.getActionHitCount(): Int = when (cardID) {

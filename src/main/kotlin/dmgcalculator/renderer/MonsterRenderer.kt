@@ -13,6 +13,7 @@ import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.VigorPower
 import com.megacrit.cardcrawl.powers.watcher.WaveOfTheHandPower
+import com.megacrit.cardcrawl.relics.CharonsAshes
 import com.megacrit.cardcrawl.relics.LetterOpener
 import com.megacrit.cardcrawl.relics.Necronomicon
 import com.megacrit.cardcrawl.stances.WrathStance
@@ -20,6 +21,7 @@ import dmgcalculator.entities.*
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addToBottom
 import dmgcalculator.util.Utils.replacesWith
+import dmgcalculator.util.Utils.toSimpleCardInfoList
 
 object MonsterRenderer {
 
@@ -176,6 +178,37 @@ object MonsterRenderer {
         player.getRelic(Necronomicon.ID)?.let { necronomiconRelic ->
             if (type == CardType.ATTACK && necronomiconRelic.checkTrigger()) {
                 actions.addToBottom(createDuplicationAttackAction())
+            }
+        }
+
+        // Apply Charon's Ashes relic if needed
+        player.getRelic(CharonsAshes.ID)?.let { charonsAshesRelic ->
+            actions.replacesWith { originActions ->
+                var hand = AbstractDungeon.player.hand.group.toSimpleCardInfoList()
+                originActions.mapIndexed { index, action ->
+                    val exhaustInfo = getExhaustInfo(hand)
+                    listOf(action)
+                        .plus(
+                            if (exhaustInfo.selfExhaust && index == 0) {
+                                Action.DamageThorns(CharonsAshes.DMG)
+                            } else {
+                                Action.NoAction
+                            }
+                        )
+                        .plus(
+                            List(exhaustInfo.exhaustInHand.size + exhaustInfo.exhaustInDrawPile) {
+                                Action.DamageThorns(CharonsAshes.DMG)
+                            }
+                        )
+                        .asGroupedAction()
+                        .also {
+                            hand = hand.filterNot {
+                                it.isHovered || exhaustInfo.exhaustInHand.contains(it)
+                            } + List(exhaustInfo.drawCard) {
+                                SimpleCardInfo.DUMMY
+                            }
+                        }
+                }
             }
         }
 

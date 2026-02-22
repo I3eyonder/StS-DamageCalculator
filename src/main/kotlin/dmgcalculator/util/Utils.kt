@@ -1,6 +1,9 @@
 package dmgcalculator.util
 
+import com.megacrit.cardcrawl.cards.AbstractCard
+import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster.Intent
+import dmgcalculator.entities.SimpleCardInfo
 import kotlin.math.min
 
 object Utils {
@@ -37,5 +40,13 @@ object Utils {
     fun <T> MutableList<T>.replacesWith(list: List<T>) {
         clear()
         addAll(list)
+    }
+
+    fun List<AbstractCard>.toSimpleCardInfoList() = map {
+        SimpleCardInfo(
+            cardId = it.cardID,
+            type = it.type,
+            isHovered = it == AbstractDungeon.player.hoveredCard,
+        )
     }
 }
