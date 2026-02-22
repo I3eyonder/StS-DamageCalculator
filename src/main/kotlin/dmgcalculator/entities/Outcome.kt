@@ -4,8 +4,9 @@ import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.powers.CurlUpPower
-import com.megacrit.cardcrawl.powers.InvinciblePower
+import com.megacrit.cardcrawl.powers.SadisticPower
 import com.megacrit.cardcrawl.relics.Boot
+import com.megacrit.cardcrawl.relics.HandDrill
 import com.megacrit.cardcrawl.relics.Torii
 import com.megacrit.cardcrawl.relics.TungstenRod
 import dmgcalculator.util.Utils.getBlockedAmount
@@ -104,6 +105,16 @@ fun Outcome.apply(
                         Boot.ID -> {
                             if (action !is Action.LoseHP && action !is Action.DamageThorns && damage in 1..4) {
                                 damage = 5
+                            }
+                        }
+
+                        HandDrill.ID -> {
+                            if (blocked > 0 && remainBlock == 0) {
+                                // Ammor broken
+                                if (AbstractDungeon.player.hasPower(SadisticPower.POWER_ID)) {
+                                    val sadisticPower = AbstractDungeon.player.getPower(SadisticPower.POWER_ID)
+                                    damage += sadisticPower.amount
+                                }
                             }
                         }
                     }

@@ -2,11 +2,19 @@ package dmgcalculator.renderer
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.megacrit.cardcrawl.cards.AbstractCard
+import com.megacrit.cardcrawl.cards.AbstractCard.CardType
+import com.megacrit.cardcrawl.cards.blue.GoForTheEyes
+import com.megacrit.cardcrawl.cards.green.BouncingFlask
+import com.megacrit.cardcrawl.cards.purple.CrushJoints
+import com.megacrit.cardcrawl.cards.purple.Indignation
+import com.megacrit.cardcrawl.cards.purple.SashWhip
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.VigorPower
+import com.megacrit.cardcrawl.powers.watcher.WaveOfTheHandPower
 import com.megacrit.cardcrawl.relics.LetterOpener
+import com.megacrit.cardcrawl.stances.WrathStance
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addToBottom
@@ -141,7 +149,7 @@ object MonsterRenderer {
         player.powers.forEach { power ->
             when (power.ID) {
                 DoubleTapPower.POWER_ID, DuplicationPower.POWER_ID -> {
-                    if (type == AbstractCard.CardType.ATTACK) {
+                    if (type == CardType.ATTACK) {
                         actions.addToBottom(createDuplicationAttackAction())
                     } else if (power.ID == DuplicationPower.POWER_ID) {
                         actions.addToBottom(baseAction)
@@ -153,7 +161,7 @@ object MonsterRenderer {
                     if (power.amount > 0 &&
                         AbstractDungeon.actionManager.cardsPlayedThisTurn.size + 1 - cardsDoubledThisTurn <= power.amount
                     ) {
-                        if (type == AbstractCard.CardType.ATTACK) {
+                        if (type == CardType.ATTACK) {
                             actions.addToBottom(createDuplicationAttackAction())
                         } else {
                             actions.addToBottom(baseAction)
@@ -166,7 +174,7 @@ object MonsterRenderer {
         // Apply LetterOpener relic if needed
         player.getRelic(LetterOpener.ID)?.let { letterOpenerRelic ->
             var counter = letterOpenerRelic.counter
-            if (type == AbstractCard.CardType.SKILL) {
+            if (type == CardType.SKILL) {
                 actions.replacesWith { originActions ->
                     originActions.map { action ->
                         counter++
@@ -238,59 +246,32 @@ object MonsterRenderer {
         aliveMonsterCount: Int,
     ): Action {
         val player = AbstractDungeon.player
-        val cardHitCount = getHitCount()
+        val cardHitCount = getActionHitCount()
         calculateCardDamage(monster)
         val damagePerHit = getDamagePerHit(monsterIndex)
-        return if (aliveMonsterCount > 1) {
-            List(cardHitCount) {
-                buildList {
-                    if (damagePerHit > 0) {
-                        if (isRandomAttackCard) {
-                            add(Action.DamageNormal(0, damagePerHit, ActionTarget.Random))
-                        } else {
-                            add(Action.DamageNormal(damagePerHit, monster))
-                        }
-                    }
-                    if (player.hasPower(JuggernautPower.POWER_ID)) {
-                        val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
-                        if (type == AbstractCard.CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
-                            add(
-                                Action.DamageThorns(
-                                    0,
-                                    juggernautPower.amount,
-                                    ActionTarget.Random
-                                )
-                            )
-                        }
-                        if (block > 0) {
-                            add(
-                                Action.DamageThorns(
-                                    0,
-                                    juggernautPower.amount,
-                                    ActionTarget.Random
-                                )
-                            )
-                        }
-                    }
-                }.asGroupedAction()
-            }.asGroupedAction()
-        } else {
-            List(cardHitCount) {
-                buildList {
-                    if (damagePerHit > 0) {
+        return List(cardHitCount) {
+            buildList {
+                if (damagePerHit > 0) {
+                    if (isRandomAttackCard && aliveMonsterCount > 1) {
+                        add(Action.DamageNormal(0, damagePerHit, ActionTarget.Random))
+                    } else {
                         add(Action.DamageNormal(damagePerHit, monster))
                     }
-                    if (player.hasPower(JuggernautPower.POWER_ID)) {
-                        val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
-                        if (type == AbstractCard.CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
+                }
+
+                // Apply player's Juggernaut power if needed
+                if (player.hasPower(JuggernautPower.POWER_ID)) {
+                    val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
+                    if (type == CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
+                        if (aliveMonsterCount > 1) {
                             add(
                                 Action.DamageThorns(
+                                    0,
                                     juggernautPower.amount,
-                                    ActionTarget.Single(monster)
+                                    ActionTarget.Random
                                 )
                             )
-                        }
-                        if (block > 0) {
+                        } else {
                             add(
                                 Action.DamageThorns(
                                     juggernautPower.amount,
@@ -299,8 +280,64 @@ object MonsterRenderer {
                             )
                         }
                     }
-                }.asGroupedAction()
+                    if (block > 0) {
+                        if (aliveMonsterCount > 1) {
+                            add(
+                                Action.DamageThorns(
+                                    0,
+                                    juggernautPower.amount,
+                                    ActionTarget.Random
+                                )
+                            )
+                        } else {
+                            add(
+                                Action.DamageThorns(
+                                    juggernautPower.amount,
+                                    ActionTarget.Single(monster)
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // Apply player's Sadistic power if needed
+                if (player.hasPower(SadisticPower.POWER_ID)) {
+                    val sadisticPower = player.getPower(SadisticPower.POWER_ID)
+                    if (isDebuffCard) {
+                        val shouldTrigger = when (cardID) {
+                            GoForTheEyes.ID -> monster.intentBaseDmg >= 0
+                            CrushJoints.ID -> AbstractDungeon.actionManager.cardsPlayedThisCombat.lastOrNull()?.type == CardType.SKILL
+                            SashWhip.ID -> AbstractDungeon.actionManager.cardsPlayedThisCombat.lastOrNull()?.type == CardType.ATTACK
+                            Indignation.ID -> player.stance.ID == WrathStance.STANCE_ID
+                            BouncingFlask.ID -> {
+                                repeat(getDebuffInstanceCount()) {
+                                    if (aliveMonsterCount > 1) {
+                                        add(Action.DamageThorns(0, sadisticPower.amount, ActionTarget.Random))
+                                    } else {
+                                        add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
+                                    }
+                                }
+                                false
+                            }
+
+                            else -> true
+                        }
+                        if (shouldTrigger) {
+                            repeat(getDebuffInstanceCount()) {
+                                add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
+                            }
+                        }
+                    }
+                    if (player.hasPower(WaveOfTheHandPower.POWER_ID)) {
+                        if (type == CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
+                            add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
+                        }
+                        if (block > 0) {
+                            add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
+                        }
+                    }
+                }
             }.asGroupedAction()
-        }
+        }.asGroupedAction()
     }
 }

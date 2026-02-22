@@ -4,7 +4,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Regret
-import com.megacrit.cardcrawl.cards.red.Rage
 import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.powers.*
@@ -61,7 +60,7 @@ object PlayerRenderer {
     private fun getIntentActions(hoveredCard: AbstractCard?): List<Action> {
         //Resolve card actions
         val cardActions = hoveredCard?.let { hoveringCard ->
-            val cardHitCount = hoveringCard.getHitCount()
+            val cardHitCount = hoveringCard.getActionHitCount()
             val baseAction = when {
                 cardHitCount > 1 -> {
                     List(cardHitCount) {
