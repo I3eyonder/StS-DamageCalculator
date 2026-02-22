@@ -14,6 +14,7 @@ import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.VigorPower
 import com.megacrit.cardcrawl.powers.watcher.WaveOfTheHandPower
 import com.megacrit.cardcrawl.relics.LetterOpener
+import com.megacrit.cardcrawl.relics.Necronomicon
 import com.megacrit.cardcrawl.stances.WrathStance
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
@@ -168,6 +169,13 @@ object MonsterRenderer {
                         }
                     }
                 }
+            }
+        }
+
+        // Apply Necronomicon relic if needed
+        player.getRelic(Necronomicon.ID)?.let { necronomiconRelic ->
+            if (type == CardType.ATTACK && necronomiconRelic.checkTrigger()) {
+                actions.addToBottom(createDuplicationAttackAction())
             }
         }
 
