@@ -172,6 +172,11 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
             it is Lightning
         }
     }
+    SecondWind.ID -> {
+        AbstractDungeon.player.hand.group.count {
+            it.type != AbstractCard.CardType.ATTACK && it != AbstractDungeon.player.hoveredCard
+        }
+    }
 
     else -> 1
 }

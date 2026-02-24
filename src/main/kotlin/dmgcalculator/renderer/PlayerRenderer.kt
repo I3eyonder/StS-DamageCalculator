@@ -61,17 +61,9 @@ object PlayerRenderer {
         //Resolve card actions
         val cardActions = hoveredCard?.let { hoveringCard ->
             val cardHitCount = hoveringCard.getActionHitCount()
-            val baseAction = when {
-                cardHitCount > 1 -> {
-                    List(cardHitCount) {
-                        hoveringCard.createIntentActions().asGroupedAction()
-                    }.asGroupedAction()
-                }
-
-                else -> {
-                    hoveringCard.createIntentActions().asGroupedAction()
-                }
-            }
+            val baseAction = List(cardHitCount) {
+                hoveringCard.createIntentActions().asGroupedAction()
+            }.asGroupedAction()
             val actions = mutableListOf(baseAction)
             AbstractDungeon.player.powers.forEach { power ->
                 when (power.ID) {
