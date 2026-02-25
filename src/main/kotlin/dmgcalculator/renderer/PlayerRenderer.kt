@@ -2,22 +2,22 @@ package dmgcalculator.renderer
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.megacrit.cardcrawl.cards.AbstractCard
+import com.megacrit.cardcrawl.cards.AbstractCard.CardType
 import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.relics.CloakClasp
+import com.megacrit.cardcrawl.relics.Necronomicon
 import com.megacrit.cardcrawl.relics.Orichalcum
 import com.megacrit.cardcrawl.relics.OrnamentalFan
-import dmgcalculator.entities.Action
-import dmgcalculator.entities.CreatureInfo
-import dmgcalculator.entities.asGroupedAction
-import dmgcalculator.entities.calculateOutcome
-import dmgcalculator.entities.flatten
+import dmgcalculator.entities.*
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addToBottom
 import dmgcalculator.util.Utils.addToTop
+import dmgcalculator.util.Utils.replacesWith
+import dmgcalculator.util.Utils.toSimpleCardInfoList
 
 object PlayerRenderer {
 
@@ -49,7 +49,7 @@ object PlayerRenderer {
 
     private fun AbstractCard.createIntentActions(): List<Action> = buildList {
         val player = AbstractDungeon.player
-        if (type == AbstractCard.CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
+        if (type == CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
             add(Action.GainBlock((player.getPower(RagePower.POWER_ID).amount)))
         }
         if (block > 0) {
@@ -58,6 +58,7 @@ object PlayerRenderer {
     }
 
     private fun getIntentActions(hoveredCard: AbstractCard?): List<Action> {
+        val player = AbstractDungeon.player
         //Resolve card actions
         val cardActions = hoveredCard?.let { hoveringCard ->
             val cardHitCount = hoveringCard.getActionHitCount()
@@ -68,7 +69,7 @@ object PlayerRenderer {
             AbstractDungeon.player.powers.forEach { power ->
                 when (power.ID) {
                     DoubleTapPower.POWER_ID -> {
-                        if (hoveringCard.type == AbstractCard.CardType.ATTACK) {
+                        if (hoveringCard.type == CardType.ATTACK) {
                             actions.addToBottom(baseAction)
                         }
                     }
@@ -87,27 +88,68 @@ object PlayerRenderer {
                     }
                 }
             }
+
+            // Apply Necronomicon relic if needed
+            player.getRelic(Necronomicon.ID)?.let { necronomiconRelic ->
+                if (hoveringCard.type == CardType.ATTACK && necronomiconRelic.checkTrigger()) {
+                    actions.addToBottom(baseAction)
+                }
+            }
+
+            // Apply FeelNoPain power if needed
+            if (player.hasPower(FeelNoPainPower.POWER_ID)) {
+                val feelNoPainPower = player.getPower(FeelNoPainPower.POWER_ID)
+                actions.replacesWith { originActions ->
+                    var hand = AbstractDungeon.player.hand.group.toSimpleCardInfoList()
+                    originActions.mapIndexed { index, action ->
+                        val exhaustInfo = hoveringCard.getExhaustInfo(hand)
+                        listOf(action)
+                            .plus(
+                                if (exhaustInfo.selfExhaust && index == 0) {
+                                    Action.GainBlock(feelNoPainPower.amount)
+                                } else {
+                                    Action.NoAction
+                                }
+                            )
+                            .plus(
+                                List(exhaustInfo.exhaustInHand.size + exhaustInfo.exhaustInDrawPile) {
+                                    Action.GainBlock(feelNoPainPower.amount)
+                                }
+                            )
+                            .asGroupedAction()
+                            .also {
+                                hand = hand.filterNot {
+                                    it.isHovered || exhaustInfo.exhaustInHand.contains(it)
+                                }.plus(
+                                    List(exhaustInfo.drawCard) {
+                                        SimpleCardInfo.DUMMY
+                                    }
+                                ).take(10)
+                            }
+                    }
+                }
+            }
             actions.toList()
         } ?: emptyList()
 
         // Resolve relics
         val relicEffect = buildList {
-            AbstractDungeon.player.relics.forEach { relic ->
+            player.relics.forEach { relic ->
                 when (relic.relicId) {
                     Orichalcum.ID -> {
-                        if (AbstractDungeon.player.currentBlock == 0 || (relic as Orichalcum).trigger) {
+                        if (player.currentBlock == 0 || (relic as Orichalcum).trigger) {
                             addToTop(Action.GainBlock(6))
                         }
                     }
 
                     CloakClasp.ID -> {
-                        if (!AbstractDungeon.player.hand.group.isEmpty()) {
+                        if (!player.hand.group.isEmpty()) {
                             addToBottom(Action.GainBlock(AbstractDungeon.player.hand.group.size))
                         }
                     }
 
                     OrnamentalFan.ID -> {
-                        if (hoveredCard?.type == AbstractCard.CardType.ATTACK && (relic.counter + 1) % 3 == 0) {
+                        if (hoveredCard?.type == CardType.ATTACK && (relic.counter + 1) % 3 == 0) {
                             addToBottom(Action.GainBlock(4))
                         }
                     }
@@ -117,7 +159,7 @@ object PlayerRenderer {
 
         // Resolve power effects pre hand
         val powerPreHandEffects = buildList {
-            AbstractDungeon.player.powers.forEach { power ->
+            player.powers.forEach { power ->
                 when (power.ID) {
                     PlatedArmorPower.POWER_ID,
                     MetallicizePower.POWER_ID,
@@ -128,7 +170,7 @@ object PlayerRenderer {
 
         // Resolve hand intent actions
         val handDamageActions = buildList {
-            AbstractDungeon.player.hand.group.forEach { card ->
+            player.hand.group.forEach { card ->
                 when (card.cardID) {
                     Burn.ID -> addToBottom(Action.DamageThorns(card.magicNumber))
                     Decay.ID -> addToBottom(Action.DamageThorns(2))
@@ -139,7 +181,7 @@ object PlayerRenderer {
 
         // Resolve power effects after hand
         val powerAfterHandEffects = buildList {
-            AbstractDungeon.player.powers.forEach { power ->
+            player.powers.forEach { power ->
                 when (power.ID) {
                     ConstrictedPower.POWER_ID -> addToBottom(Action.DamageThorns(power.amount))
                     CombustPower.POWER_ID -> power.getPrivateField<Int>("hpLoss")?.let {

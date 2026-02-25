@@ -184,7 +184,7 @@ object MonsterRenderer {
         // Apply Charon's Ashes relic if needed
         player.getRelic(CharonsAshes.ID)?.let { charonsAshesRelic ->
             actions.replacesWith { originActions ->
-                var hand = AbstractDungeon.player.hand.group.toSimpleCardInfoList()
+                var hand = player.hand.group.toSimpleCardInfoList()
                 originActions.mapIndexed { index, action ->
                     val exhaustInfo = getExhaustInfo(hand)
                     listOf(action)
@@ -233,7 +233,8 @@ object MonsterRenderer {
 
         // Apply monster debuff and player buff if needed
         actions.replacesWith { originActions ->
-            originActions.map { action ->
+            var hand = player.hand.group.toSimpleCardInfoList()
+            originActions.mapIndexed { index, action ->
                 val monsterExtraActions = monster.powers.mapNotNull { power ->
                     when (power.ID) {
                         ChokePower.POWER_ID -> Action.LoseHP(power.amount)
@@ -243,6 +244,59 @@ object MonsterRenderer {
                 val playerExtraActions = player.powers.mapNotNull { power ->
                     when (power.ID) {
                         ThousandCutsPower.POWER_ID -> Action.DamageThorns(power.amount)
+                        JuggernautPower.POWER_ID -> {
+                            if (player.hasPower(FeelNoPainPower.POWER_ID)) {
+                                val exhaustInfo = getExhaustInfo(hand)
+                                emptyList<Action>()
+                                    .plus(
+                                        if (exhaustInfo.selfExhaust && index == 0) {
+                                            if (aliveMonsterCount > 1) {
+                                                Action.DamageThorns(
+                                                    0,
+                                                    power.amount,
+                                                    ActionTarget.Random
+                                                )
+                                            } else {
+                                                Action.DamageThorns(
+                                                    power.amount,
+                                                    ActionTarget.Single(monster)
+                                                )
+                                            }
+                                        } else {
+                                            Action.NoAction
+                                        }
+                                    )
+                                    .plus(
+                                        List(exhaustInfo.exhaustInHand.size + exhaustInfo.exhaustInDrawPile) {
+                                            if (aliveMonsterCount > 1) {
+                                                Action.DamageThorns(
+                                                    0,
+                                                    power.amount,
+                                                    ActionTarget.Random
+                                                )
+                                            } else {
+                                                Action.DamageThorns(
+                                                    power.amount,
+                                                    ActionTarget.Single(monster)
+                                                )
+                                            }
+                                        }
+                                    )
+                                    .asGroupedAction()
+                                    .also {
+                                        hand = hand.filterNot {
+                                            it.isHovered || exhaustInfo.exhaustInHand.contains(it)
+                                        }.plus(
+                                            List(exhaustInfo.drawCard) {
+                                                SimpleCardInfo.DUMMY
+                                            }
+                                        ).take(10)
+                                    }
+                            } else {
+                                null
+                            }
+                        }
+
                         else -> null
                     }
                 }
