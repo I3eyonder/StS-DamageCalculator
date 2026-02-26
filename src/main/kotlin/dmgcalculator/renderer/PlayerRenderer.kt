@@ -9,10 +9,12 @@ import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.BlockReturnPower
+import com.megacrit.cardcrawl.powers.watcher.LikeWaterPower
 import com.megacrit.cardcrawl.relics.CloakClasp
 import com.megacrit.cardcrawl.relics.Necronomicon
 import com.megacrit.cardcrawl.relics.Orichalcum
 import com.megacrit.cardcrawl.relics.OrnamentalFan
+import com.megacrit.cardcrawl.stances.CalmStance
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addToBottom
@@ -172,6 +174,12 @@ object PlayerRenderer {
                     PlatedArmorPower.POWER_ID,
                     MetallicizePower.POWER_ID,
                         -> addToBottom(Action.GainBlock(power.amount.coerceAtLeast(0)))
+
+                    LikeWaterPower.POWER_ID -> {
+                        if (player.stance.ID == CalmStance.STANCE_ID) {
+                            addToBottom(Action.GainBlock(power.amount))
+                        }
+                    }
                 }
             }
         }
