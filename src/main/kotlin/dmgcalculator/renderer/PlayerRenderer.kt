@@ -8,6 +8,7 @@ import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.powers.*
+import com.megacrit.cardcrawl.powers.watcher.BlockReturnPower
 import com.megacrit.cardcrawl.relics.CloakClasp
 import com.megacrit.cardcrawl.relics.Necronomicon
 import com.megacrit.cardcrawl.relics.Orichalcum
@@ -51,6 +52,13 @@ object PlayerRenderer {
         val player = AbstractDungeon.player
         if (type == CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
             add(Action.GainBlock((player.getPower(RagePower.POWER_ID).amount)))
+        }
+        player.getHoveredMonster()?.let { hoveredMonster ->
+            hoveredMonster.getPower(BlockReturnPower.POWER_ID)?.let { blockReturnPower ->
+                if (type == CardType.ATTACK) {
+                    add(Action.GainBlock(blockReturnPower.amount))
+                }
+            }
         }
         if (block > 0) {
             add(Action.GainBlock(block))
