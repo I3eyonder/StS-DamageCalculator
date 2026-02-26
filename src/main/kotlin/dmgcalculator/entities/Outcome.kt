@@ -4,6 +4,7 @@ import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.powers.CurlUpPower
+import com.megacrit.cardcrawl.powers.EnvenomPower
 import com.megacrit.cardcrawl.powers.SadisticPower
 import com.megacrit.cardcrawl.relics.Boot
 import com.megacrit.cardcrawl.relics.HandDrill
@@ -127,11 +128,21 @@ fun Outcome.apply(
                 invincibleAmount = (invincibleAmount - damage).coerceAtLeast(0)
             }
 
-            // Apply Curl Up power
-            if (damage > 0 && action is Action.DamageNormal && hasCurlUpPower) {
-                val curlUpPower = creatureInfo.creature.getPower(CurlUpPower.POWER_ID)
-                pendingGainBlock += curlUpPower.amount
-                hasCurlUpPower = false
+            if (damage > 0 && action is Action.DamageNormal) {
+                // Apply Curl Up power
+                if (hasCurlUpPower) {
+                    val curlUpPower = creatureInfo.creature.getPower(CurlUpPower.POWER_ID)
+                    pendingGainBlock += curlUpPower.amount
+                    hasCurlUpPower = false
+                }
+
+                // Apply EnvenomPower
+                if (creatureInfo.creature.hasPower(EnvenomPower.POWER_ID)) {
+                    if (creatureInfo.creature.hasPower(SadisticPower.POWER_ID)) {
+                        val sadisticPower = creatureInfo.creature.getPower(SadisticPower.POWER_ID)
+                        damage += sadisticPower.amount
+                    }
+                }
             }
 
             if (action !is Action.LoseHP) {
