@@ -82,6 +82,7 @@ object MonsterRenderer {
                             remainBuffer = worstCardOutcome.remainBuffer,
                             hasCurlUpPower = worstCardOutcome.hasCurlUpPower,
                             invincibleAmount = worstCardOutcome.invincibleAmount,
+                            malleableAmount = worstCardOutcome.malleableAmount,
                         )
                     )
                     val bestEndTurnCalculatedOutcome = endTurnIntentActions.calculateBestOutcome(
@@ -91,6 +92,7 @@ object MonsterRenderer {
                             remainBuffer = bestCardOutcome.remainBuffer,
                             hasCurlUpPower = bestCardOutcome.hasCurlUpPower,
                             invincibleAmount = bestCardOutcome.invincibleAmount,
+                            malleableAmount = bestCardOutcome.malleableAmount,
                         )
                     )
                     msgBuilder.buildOutcomeMessage(

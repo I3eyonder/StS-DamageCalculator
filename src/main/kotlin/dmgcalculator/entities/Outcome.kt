@@ -5,6 +5,7 @@ import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.powers.CurlUpPower
 import com.megacrit.cardcrawl.powers.EnvenomPower
+import com.megacrit.cardcrawl.powers.MalleablePower
 import com.megacrit.cardcrawl.powers.SadisticPower
 import com.megacrit.cardcrawl.relics.Boot
 import com.megacrit.cardcrawl.relics.HandDrill
@@ -23,6 +24,7 @@ data class Outcome(
     var hasCurlUpPower: Boolean = false,
     var pendingGainBlock: Int = 0,
     var invincibleAmount: Int = -1,
+    var malleableAmount: Int = -1,
 ) {
 
     val isDead: Boolean
@@ -142,6 +144,11 @@ fun Outcome.apply(
                         val sadisticPower = creatureInfo.creature.getPower(SadisticPower.POWER_ID)
                         damage += sadisticPower.amount
                     }
+                }
+
+                // Apply MalleablePower
+                if (malleableAmount >= 0 && damage < remainHP) {
+                    pendingGainBlock += malleableAmount++
                 }
             }
 

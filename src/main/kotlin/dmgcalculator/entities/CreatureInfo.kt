@@ -1,11 +1,7 @@
 package dmgcalculator.entities
 
 import com.megacrit.cardcrawl.core.AbstractCreature
-import com.megacrit.cardcrawl.powers.BufferPower
-import com.megacrit.cardcrawl.powers.CurlUpPower
-import com.megacrit.cardcrawl.powers.IntangiblePlayerPower
-import com.megacrit.cardcrawl.powers.IntangiblePower
-import com.megacrit.cardcrawl.powers.InvinciblePower
+import com.megacrit.cardcrawl.powers.*
 
 data class CreatureInfo(
     val creature: AbstractCreature,
@@ -16,4 +12,5 @@ data class CreatureInfo(
     val hasIntangiblePower: Boolean = creature.hasPower(IntangiblePower.POWER_ID),
     val hasIntangiblePlayerPower: Boolean = creature.hasPower(IntangiblePlayerPower.POWER_ID),
     val invincibleAmount: Int = creature.getPower(InvinciblePower.POWER_ID)?.amount ?: -1,
+    val malleableAmount: Int = creature.getPower(MalleablePower.POWER_ID)?.amount ?: -1,
 )
