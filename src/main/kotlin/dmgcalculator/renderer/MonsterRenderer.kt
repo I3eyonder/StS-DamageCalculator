@@ -7,10 +7,12 @@ import com.megacrit.cardcrawl.cards.blue.GoForTheEyes
 import com.megacrit.cardcrawl.cards.green.BouncingFlask
 import com.megacrit.cardcrawl.cards.purple.CrushJoints
 import com.megacrit.cardcrawl.cards.purple.Indignation
+import com.megacrit.cardcrawl.cards.purple.PressurePoints
 import com.megacrit.cardcrawl.cards.purple.SashWhip
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.powers.*
+import com.megacrit.cardcrawl.powers.watcher.MarkPower
 import com.megacrit.cardcrawl.powers.watcher.VigorPower
 import com.megacrit.cardcrawl.powers.watcher.WaveOfTheHandPower
 import com.megacrit.cardcrawl.relics.CharonsAshes
@@ -41,7 +43,7 @@ object MonsterRenderer {
                         this.filter { action ->
                             when (action) {
                                 is Action.DamageNormal -> {
-                                    if (action.target is ActionTarget.Single) {
+                                    if (action.target is ActionTarget.Single && action.target.filterable) {
                                         action.target.target == hoveredMonster
                                     } else {
                                         true
@@ -49,7 +51,15 @@ object MonsterRenderer {
                                 }
 
                                 is Action.DamageThorns -> {
-                                    if (action.target is ActionTarget.Single) {
+                                    if (action.target is ActionTarget.Single && action.target.filterable) {
+                                        action.target.target == hoveredMonster
+                                    } else {
+                                        true
+                                    }
+                                }
+
+                                is Action.LoseHP -> {
+                                    if (action.target is ActionTarget.Single && action.target.filterable) {
                                         action.target.target == hoveredMonster
                                     } else {
                                         true
@@ -239,7 +249,7 @@ object MonsterRenderer {
             originActions.mapIndexed { index, action ->
                 val monsterExtraActions = monster.powers.mapNotNull { power ->
                     when (power.ID) {
-                        ChokePower.POWER_ID -> Action.LoseHP(power.amount)
+                        ChokePower.POWER_ID -> Action.LoseHP(power.amount, monster)
                         else -> null
                     }
                 }
@@ -354,6 +364,14 @@ object MonsterRenderer {
                     } else {
                         add(Action.DamageNormal(damagePerHit, monster))
                     }
+                }
+
+                // Apply MarkPower if needed
+                if (cardID == PressurePoints.ID) {
+                    monster.getPower(MarkPower.POWER_ID)?.let { markPower ->
+                        add(Action.LoseHP(markPower.amount, monster))
+                    }
+                    add(Action.LoseHP(magicNumber, ActionTarget.Single(monster)))
                 }
 
                 // Apply player's Juggernaut power if needed

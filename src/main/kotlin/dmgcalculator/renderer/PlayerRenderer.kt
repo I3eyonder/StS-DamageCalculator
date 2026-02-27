@@ -190,7 +190,7 @@ object PlayerRenderer {
                 when (card.cardID) {
                     Burn.ID -> addToBottom(Action.DamageThorns(card.magicNumber))
                     Decay.ID -> addToBottom(Action.DamageThorns(2))
-                    Regret.ID -> addToBottom(Action.LoseHP(AbstractDungeon.player.hand.size()))
+                    Regret.ID -> addToBottom(Action.LoseHP(AbstractDungeon.player.hand.size(), player))
                 }
             }
         }
@@ -201,7 +201,7 @@ object PlayerRenderer {
                 when (power.ID) {
                     ConstrictedPower.POWER_ID -> addToBottom(Action.DamageThorns(power.amount))
                     CombustPower.POWER_ID -> power.getPrivateField<Int>("hpLoss")?.let {
-                        addToBottom(Action.LoseHP(it))
+                        addToBottom(Action.LoseHP(it, player))
                     }
 
                     RegenerateMonsterPower.POWER_ID -> addToBottom(Action.GainHP(power.amount))
