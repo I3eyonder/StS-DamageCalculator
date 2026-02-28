@@ -161,16 +161,18 @@ fun StringBuilder.buildOutcomeMessage(
         if (bestOutcome.blocked > 0) {
             append("\n")
                 .append(
-                    "(%s blocked)".format(
-                        bestOutcome.blocked.toString().colored("#00FF00")
+                    "(%s blocked, %s blocks remaining)".format(
+                        bestOutcome.blocked.toString().colored("#00FF00"),
+                        bestOutcome.remainBlock.toString().colored("#00FF00"),
                     )
                 )
         }
     } else {
         append("\n")
             .append(
-                "(%s blocked)".format(
-                    Range(worstOutcome.blocked, bestOutcome.blocked).sorted().colored("#00FF00")
+                "(%s blocked, %s blocks remaining)".format(
+                    Range(worstOutcome.blocked, bestOutcome.blocked).sorted().colored("#00FF00"),
+                    Range(worstOutcome.remainBlock, bestOutcome.remainBlock).sorted().colored("#00FF00"),
                 )
             )
     }
@@ -203,7 +205,7 @@ fun StringBuilder.buildOutcomeMessage(
             } else {
                 append("\n")
                     .append(
-                        "%s HP remains".format(
+                        "%s HP remaining".format(
                             bestOutcome.remainHP.toString().colored("#00BFFF")
                         )
                     )
@@ -211,7 +213,7 @@ fun StringBuilder.buildOutcomeMessage(
         } else {
             append("\n")
                 .append(
-                    "%s HP remains".format(
+                    "%s HP remaining".format(
                         Range(worstOutcome.remainHP, bestOutcome.remainHP).sorted()
                             .colored("#00BFFF", reversed = true)
                     )

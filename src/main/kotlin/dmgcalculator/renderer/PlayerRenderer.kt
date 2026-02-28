@@ -45,7 +45,7 @@ object PlayerRenderer {
             sb.renderFixedSizeMessage(
                 msg,
                 AbstractDungeon.player.hb.cX,
-                AbstractDungeon.player.hb.cY + AbstractDungeon.player.hb.height
+                AbstractDungeon.player.hb.cY + AbstractDungeon.player.hb.height / 2 + 125f,
             )
         }
     }

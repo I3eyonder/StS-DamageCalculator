@@ -124,7 +124,11 @@ object MonsterRenderer {
             }
             val msg = msgBuilder.toString()
             if (msg.isNotEmpty()) {
-                sb.renderFixedSizeMessage(msgBuilder.toString(), monster.hb.cX, monster.hb.cY + monster.hb.height)
+                sb.renderFixedSizeMessage(
+                    msgBuilder.toString(),
+                    monster.hb.cX,
+                    monster.hb.cY + monster.hb.height / 2 + 125f,
+                )
             }
         }
     }
