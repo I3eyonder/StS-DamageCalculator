@@ -127,7 +127,7 @@ fun AbstractPlayer.getEndTurnIntentActions(
     }
 
     // orbs damage
-    val playerOrbs = if (hoveredCard?.isOrbEvokerCard == true) {
+    val playerOrbs = if (hoveredCard?.isOrbEvokeCard == true) {
         orbs.drop(1)
     } else {
         orbs

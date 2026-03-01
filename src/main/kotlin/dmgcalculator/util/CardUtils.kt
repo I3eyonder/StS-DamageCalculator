@@ -8,8 +8,7 @@ import com.megacrit.cardcrawl.cards.purple.*
 import com.megacrit.cardcrawl.cards.red.*
 import com.megacrit.cardcrawl.cards.tempCards.Expunger
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
-import com.megacrit.cardcrawl.orbs.EmptyOrbSlot
-import com.megacrit.cardcrawl.orbs.Lightning
+import com.megacrit.cardcrawl.orbs.*
 import com.megacrit.cardcrawl.powers.CorruptionPower
 import com.megacrit.cardcrawl.powers.DarkEmbracePower
 import com.megacrit.cardcrawl.relics.ChemicalX
@@ -67,14 +66,34 @@ private val applyDebuffCards = listOf(
     Indignation.ID,
 )
 
-private val orbEvokerCards = listOf(
+private val orbEvokeCards = listOf(
     Dualcast.ID,
     MultiCast.ID,
     Recursion.ID,
 )
 
-val AbstractCard.isOrbEvokerCard: Boolean
-    get() = orbEvokerCards.contains(cardID)
+private val orbChannelCards = listOf(
+    Zap.ID,
+    BallLightning.ID,
+    ColdSnap.ID,
+    Coolheaded.ID,
+    Chaos.ID,
+    Chill.ID,
+    Darkness.ID,
+    DoomAndGloom.ID,
+    Fusion.ID,
+    Glacier.ID,
+    Tempest.ID,
+    Electrodynamics.ID,
+    MeteorStrike.ID,
+    Rainbow.ID,
+)
+
+val AbstractCard.isOrbChannelCard: Boolean
+    get() = orbChannelCards.contains(cardID)
+
+val AbstractCard.isOrbEvokeCard: Boolean
+    get() = orbEvokeCards.contains(cardID)
 
 val AbstractCard.isRandomAttackCard: Boolean
     get() = randomAttackCards.contains(cardID)
@@ -157,6 +176,97 @@ fun AbstractCard.getExhaustInfo(hand: List<SimpleCardInfo>): ExhaustInfo {
     }
 }
 
+fun AbstractCard.getChannelingOrbs(): List<AbstractOrb> = when (cardID) {
+    Zap.ID -> {
+        listOf(Lightning())
+    }
+
+    BallLightning.ID -> {
+        List(magicNumber) {
+            Lightning()
+        }
+    }
+
+    ColdSnap.ID -> {
+        List(magicNumber) {
+            Frost()
+        }
+    }
+
+    Coolheaded.ID -> {
+        listOf(Frost())
+    }
+
+    Chaos.ID -> {
+        if (upgraded) {
+            List(2) {
+                Plasma()
+            }
+        } else {
+            listOf(Plasma())
+        }
+    }
+
+    Chill.ID -> {
+        val aliveMonsterCount = AbstractDungeon.getMonsters().aliveMonsters.size
+        List(aliveMonsterCount * magicNumber) {
+            Frost()
+        }
+    }
+
+    Darkness.ID -> {
+        listOf(Dark())
+    }
+
+    DoomAndGloom.ID -> {
+        listOf(Dark())
+    }
+
+    Fusion.ID -> {
+        List(magicNumber) {
+            Plasma()
+        }
+    }
+
+    Glacier.ID -> {
+        List(magicNumber) {
+            Frost()
+        }
+    }
+
+    Tempest.ID -> {
+        var count = EnergyPanel.totalCount
+        if (AbstractDungeon.player.hasRelic(ChemicalX.ID)) {
+            count += 2
+        }
+        List(count) {
+            Lightning()
+        }
+    }
+
+    Electrodynamics.ID -> {
+        List(magicNumber) {
+            Lightning()
+        }
+    }
+
+    MeteorStrike.ID -> {
+        List(magicNumber) {
+            Plasma()
+        }
+    }
+
+    Rainbow.ID -> {
+        listOf(
+            Lightning(),
+            Frost(),
+            Dark(),
+        )
+    }
+
+    else -> emptyList()
+}
+
 fun AbstractCard.getActionHitCount(): Int = when (cardID) {
     TwinStrike.ID -> 2
     RiddleWithHoles.ID -> 5
@@ -182,6 +292,7 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
             it is Lightning
         }
     }
+
     SecondWind.ID -> {
         AbstractDungeon.player.hand.group.count {
             it.type != AbstractCard.CardType.ATTACK && it != AbstractDungeon.player.hoveredCard
