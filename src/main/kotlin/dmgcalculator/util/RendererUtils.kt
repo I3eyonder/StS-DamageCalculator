@@ -161,8 +161,13 @@ fun StringBuilder.buildOutcomeMessage(
         if (bestOutcome.blocked > 0) {
             append("\n")
                 .append(
-                    "(%s blocked, %s blocks remaining)".format(
+                    "(%s blocked)".format(
                         bestOutcome.blocked.toString().colored("#00FF00"),
+                    )
+                )
+                .append("\n")
+                .append(
+                    "(%s blocks remaining)".format(
                         bestOutcome.remainBlock.toString().colored("#00FF00"),
                     )
                 )
@@ -170,8 +175,13 @@ fun StringBuilder.buildOutcomeMessage(
     } else {
         append("\n")
             .append(
-                "(%s blocked, %s blocks remaining)".format(
+                "(%s blocked)".format(
                     Range(worstOutcome.blocked, bestOutcome.blocked).sorted().colored("#00FF00"),
+                )
+            )
+            .append("\n")
+            .append(
+                "(%s blocks remaining)".format(
                     Range(worstOutcome.remainBlock, bestOutcome.remainBlock).sorted().colored("#00FF00"),
                 )
             )
