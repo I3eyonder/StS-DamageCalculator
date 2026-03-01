@@ -76,8 +76,9 @@ object MonsterRenderer {
                         this
                     }
                 }?.calculateOutcome(creatureInfo) ?: (null to null)
+            val endTurnIntentActions = player.getEndTurnIntentActions(aliveMonsterCount, hoveredCard)
             if (worstCardOutcome != null && bestCardOutcome != null) {
-                val showCardRemainHP = bestCardOutcome.isDead || !player.hasEndTurnDamage()
+                val showCardRemainHP = bestCardOutcome.isDead || endTurnIntentActions.isEmpty()
                 msgBuilder.buildOutcomeMessage(
                     worstCardOutcome,
                     bestCardOutcome,
@@ -87,7 +88,6 @@ object MonsterRenderer {
                     msgBuilder.append("\n")
                         .append("--End Turn--".colored("#FCBA03"))
                         .append("\n")
-                    val endTurnIntentActions = player.getEndTurnIntentActions(aliveMonsterCount)
                     val worstEndTurnCalculatedOutcome = endTurnIntentActions.calculateWorstOutcome(
                         creatureInfo.copy(
                             remainHP = worstCardOutcome.remainHP,
@@ -113,10 +113,9 @@ object MonsterRenderer {
                         bestEndTurnCalculatedOutcome,
                     )
                 }
-            } else if (player.hasEndTurnDamage()) {
+            } else if (endTurnIntentActions.isNotEmpty()) {
                 msgBuilder.append("--End Turn--".colored("#FCBA03"))
                     .append("\n")
-                val endTurnIntentActions = player.getEndTurnIntentActions(aliveMonsterCount)
                 val (worstEndTurnOutcome, bestEndTurnOutcome) = endTurnIntentActions.calculateOutcome(
                     creatureInfo
                 )

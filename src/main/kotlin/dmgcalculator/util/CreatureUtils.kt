@@ -1,9 +1,11 @@
 package dmgcalculator.util
 
+import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.monsters.MonsterGroup
+import com.megacrit.cardcrawl.orbs.Frost
 import com.megacrit.cardcrawl.orbs.Lightning
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.OmegaPower
@@ -59,48 +61,13 @@ val List<AbstractMonster>.aliveMonsterNumber: Int
         !it.isDeadOrEscaped
     }
 
-fun AbstractCreature.hasEndTurnDamage(): Boolean {
-    // Check creature powers
-    val hasEndTurnDamagePower = powers.any { p ->
-        p.ID == CombustPower.POWER_ID ||
-                p.ID == OmegaPower.POWER_ID ||
-                (p.ID.contains(TheBombPower.POWER_ID) && p.amount == 1)
-    }
-    if (hasEndTurnDamagePower) return true
-
-    // Check Relics damage (players only)
-    if (this is AbstractPlayer) {
-        relics.forEach { relic ->
-            when (relic.relicId) {
-                StoneCalendar.ID -> {
-                    if (relic.counter == 7) return true
-                }
-
-                Orichalcum.ID -> {
-                    if (currentBlock == 0 || (relic as Orichalcum).trigger)
-                        if (hasPower(JuggernautPower.POWER_ID)) return true
-                }
-
-                CloakClasp.ID -> {
-                    if (hand.group.isNotEmpty())
-                        if (hasPower(JuggernautPower.POWER_ID)) return true
-                }
-            }
-        }
-        if (orbs.any { it.ID == Lightning.ORB_ID }) {
-            return true
-        }
-    }
-
-    return false
-}
-
 fun AbstractPlayer.getHoveredMonster(): AbstractMonster? {
     return getPrivateField("hoveredMonster")
 }
 
 fun AbstractPlayer.getEndTurnIntentActions(
     aliveMonsterCount: Int,
+    hoveredCard: AbstractCard?,
 ): List<Action> = buildList {
     // relics damage
     relics.forEach { relic ->
@@ -160,12 +127,41 @@ fun AbstractPlayer.getEndTurnIntentActions(
     }
 
     // orbs damage
-    orbs.forEach { orb ->
-        if (orb.ID == Lightning.ORB_ID) {
-            if (hasPower(ElectroPower.POWER_ID)) {
-                addToBottom(Action.DamageThorns(orb.passiveAmount))
-            } else {
-                addToBottom(Action.DamageThorns(0, orb.passiveAmount, ActionTarget.Random))
+    val playerOrbs = if (hoveredCard?.isOrbEvokerCard == true) {
+        orbs.drop(1)
+    } else {
+        orbs
+    }
+    playerOrbs.forEach { orb ->
+        when (orb.ID) {
+            Lightning.ORB_ID -> {
+                if (hasPower(ElectroPower.POWER_ID)) {
+                    addToBottom(Action.DamageThorns(orb.passiveAmount))
+                } else {
+                    addToBottom(Action.DamageThorns(0, orb.passiveAmount, ActionTarget.Random))
+                }
+            }
+
+            Frost.ORB_ID -> {
+                if (hasPower(JuggernautPower.POWER_ID)) {
+                    val juggernautPower = getPower(JuggernautPower.POWER_ID)
+                    if (aliveMonsterCount > 1) {
+                        add(
+                            Action.DamageThorns(
+                                0,
+                                juggernautPower.amount,
+                                ActionTarget.Random,
+                            )
+                        )
+                    } else {
+                        add(
+                            Action.DamageThorns(
+                                juggernautPower.amount,
+                                ActionTarget.All,
+                            )
+                        )
+                    }
+                }
             }
         }
     }
