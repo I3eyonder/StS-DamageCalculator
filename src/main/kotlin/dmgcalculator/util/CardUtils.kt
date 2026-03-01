@@ -8,6 +8,7 @@ import com.megacrit.cardcrawl.cards.purple.*
 import com.megacrit.cardcrawl.cards.red.*
 import com.megacrit.cardcrawl.cards.tempCards.Expunger
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
+import com.megacrit.cardcrawl.orbs.EmptyOrbSlot
 import com.megacrit.cardcrawl.orbs.Lightning
 import com.megacrit.cardcrawl.powers.CorruptionPower
 import com.megacrit.cardcrawl.powers.DarkEmbracePower
@@ -188,6 +189,11 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
     }
 
     Dualcast.ID -> 2
+    Barrage.ID -> {
+        AbstractDungeon.player.orbs.count {
+            it !is EmptyOrbSlot
+        }
+    }
 
     else -> 1
 }
