@@ -11,6 +11,9 @@ import com.megacrit.cardcrawl.cards.purple.PressurePoints
 import com.megacrit.cardcrawl.cards.purple.SashWhip
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
+import com.megacrit.cardcrawl.orbs.Dark
+import com.megacrit.cardcrawl.orbs.Frost
+import com.megacrit.cardcrawl.orbs.Lightning
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.MarkPower
 import com.megacrit.cardcrawl.powers.watcher.VigorPower
@@ -453,6 +456,50 @@ object MonsterRenderer {
                         }
                         if (block > 0) {
                             add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
+                        }
+                    }
+                }
+
+                // Evoke orbs if needed
+                if (isOrbEvokerCard) {
+                    player.orbs.firstOrNull()?.let { orbsToEvoke ->
+                        when (orbsToEvoke.ID) {
+                            Lightning.ORB_ID -> {
+                                if (player.hasPower(ElectroPower.POWER_ID)) {
+                                    add(Action.DamageThorns(orbsToEvoke.evokeAmount))
+                                } else {
+                                    add(Action.DamageThorns(0, orbsToEvoke.evokeAmount, ActionTarget.Random))
+                                }
+                            }
+
+                            Frost.ORB_ID -> {
+                                if (player.hasPower(JuggernautPower.POWER_ID)) {
+                                    val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
+                                    if (aliveMonsterCount > 1) {
+                                        add(
+                                            Action.DamageThorns(
+                                                0,
+                                                juggernautPower.amount,
+                                                ActionTarget.Random
+                                            )
+                                        )
+                                    } else {
+                                        add(
+                                            Action.DamageThorns(
+                                                juggernautPower.amount,
+                                                ActionTarget.Single(monster)
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            Dark.ORB_ID -> {
+                                val lowestHPMonster = AbstractDungeon.getMonsters().aliveMonsters.minBy {
+                                    it.currentHealth
+                                }
+                                add(Action.DamageThorns(orbsToEvoke.evokeAmount, ActionTarget.Single(lowestHPMonster)))
+                            }
                         }
                     }
                 }

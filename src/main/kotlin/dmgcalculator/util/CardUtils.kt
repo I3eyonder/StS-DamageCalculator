@@ -66,6 +66,15 @@ private val applyDebuffCards = listOf(
     Indignation.ID,
 )
 
+private val orbEvokerCards = listOf(
+    Dualcast.ID,
+    MultiCast.ID,
+    Recursion.ID,
+)
+
+val AbstractCard.isOrbEvokerCard: Boolean
+    get() = orbEvokerCards.contains(cardID)
+
 val AbstractCard.isRandomAttackCard: Boolean
     get() = randomAttackCards.contains(cardID)
 
@@ -155,7 +164,7 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
         -> magicNumber
 
     Whirlwind.ID, Skewer.ID, ReinforcedBody.ID,
-    Tempest.ID, Transmutation.ID,
+    Tempest.ID, Transmutation.ID, MultiCast.ID,
         -> {
         var hits = EnergyPanel.totalCount
         if (AbstractDungeon.player.hasRelic(ChemicalX.ID)) {
@@ -177,6 +186,8 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
             it.type != AbstractCard.CardType.ATTACK && it != AbstractDungeon.player.hoveredCard
         }
     }
+
+    Dualcast.ID -> 2
 
     else -> 1
 }
