@@ -7,6 +7,7 @@ import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
+import com.megacrit.cardcrawl.orbs.Frost
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.BlockReturnPower
 import com.megacrit.cardcrawl.powers.watcher.LikeWaterPower
@@ -195,6 +196,15 @@ object PlayerRenderer {
             }
         }
 
+        // Resolve orbs actions
+        val orbsActions = buildList {
+            player.orbs.forEach { orb ->
+                if (orb.ID == Frost.ORB_ID) {
+                    addToBottom(Action.GainBlock(orb.passiveAmount))
+                }
+            }
+        }
+
         // Resolve power effects after hand
         val powerAfterHandEffects = buildList {
             player.powers.forEach { power ->
@@ -213,7 +223,7 @@ object PlayerRenderer {
         // Resolve monster attack intent
         val monsterAttackIntentActions = AbstractDungeon.getMonsters().aliveMonsters.getAttackIntentActions()
 
-        return (cardActions + relicEffect + powerPreHandEffects + handDamageActions + powerAfterHandEffects + monsterAttackIntentActions).flatten()
+        return (cardActions + relicEffect + powerPreHandEffects + handDamageActions + orbsActions + powerAfterHandEffects + monsterAttackIntentActions).flatten()
     }
 
 }
