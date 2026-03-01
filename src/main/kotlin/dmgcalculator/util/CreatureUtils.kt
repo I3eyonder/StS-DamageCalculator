@@ -4,10 +4,8 @@ import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.monsters.MonsterGroup
-import com.megacrit.cardcrawl.powers.AbstractPower
-import com.megacrit.cardcrawl.powers.CombustPower
-import com.megacrit.cardcrawl.powers.JuggernautPower
-import com.megacrit.cardcrawl.powers.TheBombPower
+import com.megacrit.cardcrawl.orbs.Lightning
+import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.OmegaPower
 import com.megacrit.cardcrawl.relics.CloakClasp
 import com.megacrit.cardcrawl.relics.Orichalcum
@@ -89,6 +87,9 @@ fun AbstractCreature.hasEndTurnDamage(): Boolean {
                 }
             }
         }
+        if (orbs.any { it.ID == Lightning.ORB_ID }) {
+            return true
+        }
     }
 
     return false
@@ -154,6 +155,17 @@ fun AbstractPlayer.getEndTurnIntentActions(
                             )
                         }
                     }
+            }
+        }
+    }
+
+    // orbs damage
+    orbs.forEach { orb ->
+        if (orb.ID == Lightning.ORB_ID) {
+            if (hasPower(ElectroPower.POWER_ID)) {
+                addToBottom(Action.DamageThorns(orb.passiveAmount))
+            } else {
+                addToBottom(Action.DamageThorns(0, orb.passiveAmount, ActionTarget.Random))
             }
         }
     }
