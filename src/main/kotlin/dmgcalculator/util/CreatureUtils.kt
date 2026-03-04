@@ -5,6 +5,7 @@ import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.monsters.MonsterGroup
+import com.megacrit.cardcrawl.orbs.EmptyOrbSlot
 import com.megacrit.cardcrawl.orbs.Frost
 import com.megacrit.cardcrawl.orbs.Lightning
 import com.megacrit.cardcrawl.powers.*
@@ -127,10 +128,14 @@ fun AbstractPlayer.getEndTurnIntentActions(
     }
 
     // orbs damage
-    val playerOrbs = if (hoveredCard?.isOrbEvokeCard == true) {
-        orbs.drop(1)
-    } else {
-        orbs
+    val playerOrbs = orbs.plus(hoveredCard?.getChannelingOrbs().orEmpty()).filterNot {
+        it is EmptyOrbSlot
+    }.takeLast(maxOrbs).let {
+        if (hoveredCard?.isOrbEvokeCard == true) {
+            it.drop(1)
+        } else {
+            it
+        }
     }
     playerOrbs.forEach { orb ->
         when (orb.ID) {
