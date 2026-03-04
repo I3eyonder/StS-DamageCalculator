@@ -78,7 +78,7 @@ object MonsterRenderer {
                         this
                     }
                 }?.calculateOutcome(creatureInfo) ?: (null to null)
-            val endTurnIntentActions = player.getEndTurnIntentActions(aliveMonsterCount, hoveredCard)
+            val endTurnIntentActions = player.getEndTurnIntentActions(monster, aliveMonsterCount, hoveredCard)
             if (worstCardOutcome != null && bestCardOutcome != null) {
                 val showCardRemainHP = bestCardOutcome.isDead || endTurnIntentActions.isEmpty()
                 msgBuilder.buildOutcomeMessage(
@@ -364,13 +364,15 @@ object MonsterRenderer {
         val cardHitCount = getActionHitCount()
         calculateCardDamage(monster)
         val damagePerHit = getDamagePerHit(monsterIndex)
+        val orbDamageMultiplier = if (monster.hasPower(LockOnPower.POWER_ID)) 1.5f else 1f
         fun MutableList<Action>.addOrbEvokeAction(orbsToEvoke: AbstractOrb) {
             when (orbsToEvoke.ID) {
                 Lightning.ORB_ID -> {
+                    val damageAmount = orbsToEvoke.evokeAmount.times(orbDamageMultiplier).toInt()
                     if (player.hasPower(ElectroPower.POWER_ID)) {
-                        add(Action.DamageThorns(orbsToEvoke.evokeAmount))
+                        add(Action.DamageThorns(damageAmount))
                     } else {
-                        add(Action.DamageThorns(0, orbsToEvoke.evokeAmount, ActionTarget.Random))
+                        add(Action.DamageThorns(0, damageAmount, ActionTarget.Random))
                     }
                 }
 
@@ -400,7 +402,8 @@ object MonsterRenderer {
                     val lowestHPMonster = AbstractDungeon.getMonsters().aliveMonsters.minBy {
                         it.currentHealth
                     }
-                    add(Action.DamageThorns(orbsToEvoke.evokeAmount, ActionTarget.Single(lowestHPMonster)))
+                    val damageAmount = orbsToEvoke.evokeAmount.times(orbDamageMultiplier).toInt()
+                    add(Action.DamageThorns(damageAmount, ActionTarget.Single(lowestHPMonster)))
                 }
             }
         }

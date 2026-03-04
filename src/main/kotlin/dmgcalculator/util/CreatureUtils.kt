@@ -67,6 +67,7 @@ fun AbstractPlayer.getHoveredMonster(): AbstractMonster? {
 }
 
 fun AbstractPlayer.getEndTurnIntentActions(
+    monster: AbstractMonster,
     aliveMonsterCount: Int,
     hoveredCard: AbstractCard?,
 ): List<Action> = buildList {
@@ -137,13 +138,15 @@ fun AbstractPlayer.getEndTurnIntentActions(
             it
         }
     }
+    val orbDamageMultiplier = if (monster.hasPower(LockOnPower.POWER_ID)) 1.5f else 1f
     playerOrbs.forEach { orb ->
         when (orb.ID) {
             Lightning.ORB_ID -> {
+                val damageAmount = orb.passiveAmount.times(orbDamageMultiplier).toInt()
                 if (hasPower(ElectroPower.POWER_ID)) {
-                    addToBottom(Action.DamageThorns(orb.passiveAmount))
+                    addToBottom(Action.DamageThorns(damageAmount))
                 } else {
-                    addToBottom(Action.DamageThorns(0, orb.passiveAmount, ActionTarget.Random))
+                    addToBottom(Action.DamageThorns(0, damageAmount, ActionTarget.Random))
                 }
             }
 
