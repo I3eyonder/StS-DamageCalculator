@@ -3,6 +3,8 @@ package dmgcalculator.renderer
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.AbstractCard.CardType
+import com.megacrit.cardcrawl.cards.colorless.BandageUp
+import com.megacrit.cardcrawl.cards.colorless.Bite
 import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.status.Burn
@@ -66,6 +68,13 @@ object PlayerRenderer {
         }
         if (block > 0) {
             add(Action.GainBlock(block))
+        }
+
+        // Healing effects
+        when (cardID) {
+            BandageUp.ID, Bite.ID -> {
+                add(Action.GainHP(magicNumber))
+            }
         }
     }
 
