@@ -503,16 +503,12 @@ object MonsterRenderer {
                 }
 
                 // Evoke orbs if needed
-                val playerOrbs = player.orbs.plus(getChannelingOrbs()).filterNot {
+                player.orbs.plus(getChannelingOrbs()).filterNot {
                     it is EmptyOrbSlot
-                }
-                val orbEvokedOnChannel = playerOrbs.size - player.maxOrbs
-                if (orbEvokedOnChannel > 0) {
-                    playerOrbs.take(orbEvokedOnChannel.coerceAtMost(player.maxOrbs))
-                        .forEach { orbsToEvoke ->
-                            addOrbEvokeAction(orbsToEvoke)
-                        }
-                }
+                }.dropLast(player.maxOrbs)
+                    .forEach { evokedOrb ->
+                        addOrbEvokeAction(evokedOrb)
+                    }
                 if (isOrbEvokeCard) {
                     player.orbs.firstOrNull()?.let { orbsToEvoke ->
                         addOrbEvokeAction(orbsToEvoke)

@@ -7,6 +7,7 @@ import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
+import com.megacrit.cardcrawl.orbs.EmptyOrbSlot
 import com.megacrit.cardcrawl.orbs.Frost
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.BlockReturnPower
@@ -198,9 +199,20 @@ object PlayerRenderer {
 
         // Resolve orbs actions
         val orbsActions = buildList {
-            player.orbs.forEach { orb ->
-                if (orb.ID == Frost.ORB_ID) {
-                    addToBottom(Action.GainBlock(orb.passiveAmount))
+            val accumulateOrbs = player.orbs
+                .plus(hoveredCard?.getChannelingOrbs().orEmpty())
+                .filterNot {
+                    it is EmptyOrbSlot
+                }
+            accumulateOrbs.dropLast(player.maxOrbs).forEach { evokedOrb ->
+                if (evokedOrb.ID == Frost.ORB_ID) {
+                    addToBottom(Action.GainBlock(evokedOrb.evokeAmount))
+                }
+
+            }
+            accumulateOrbs.takeLast(player.maxOrbs).forEach { retainOrb ->
+                if (retainOrb.ID == Frost.ORB_ID) {
+                    addToBottom(Action.GainBlock(retainOrb.passiveAmount))
                 }
             }
         }
