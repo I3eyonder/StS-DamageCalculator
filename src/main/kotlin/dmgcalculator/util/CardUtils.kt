@@ -1,6 +1,7 @@
 package dmgcalculator.util
 
 import com.megacrit.cardcrawl.cards.AbstractCard
+import com.megacrit.cardcrawl.cards.AbstractCard.CardType
 import com.megacrit.cardcrawl.cards.blue.*
 import com.megacrit.cardcrawl.cards.colorless.*
 import com.megacrit.cardcrawl.cards.green.*
@@ -11,6 +12,7 @@ import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.orbs.*
 import com.megacrit.cardcrawl.powers.CorruptionPower
 import com.megacrit.cardcrawl.powers.DarkEmbracePower
+import com.megacrit.cardcrawl.powers.StormPower
 import com.megacrit.cardcrawl.relics.ChemicalX
 import com.megacrit.cardcrawl.ui.panels.EnergyPanel
 import dmgcalculator.entities.ExhaustInfo
@@ -176,95 +178,104 @@ fun AbstractCard.getExhaustInfo(hand: List<SimpleCardInfo>): ExhaustInfo {
     }
 }
 
-fun AbstractCard.getChannelingOrbs(): List<AbstractOrb> = when (cardID) {
-    Zap.ID -> {
-        listOf(Lightning())
-    }
-
-    BallLightning.ID -> {
-        List(magicNumber) {
-            Lightning()
+fun AbstractCard.getChannelingOrbs(): List<AbstractOrb> {
+    return when (cardID) {
+        Zap.ID -> {
+            listOf(Lightning())
         }
-    }
 
-    ColdSnap.ID -> {
-        List(magicNumber) {
-            Frost()
+        BallLightning.ID -> {
+            List(magicNumber) {
+                Lightning()
+            }
         }
-    }
 
-    Coolheaded.ID -> {
-        listOf(Frost())
-    }
+        ColdSnap.ID -> {
+            List(magicNumber) {
+                Frost()
+            }
+        }
 
-    Chaos.ID -> {
-        if (upgraded) {
-            List(2) {
+        Coolheaded.ID -> {
+            listOf(Frost())
+        }
+
+        Chaos.ID -> {
+            if (upgraded) {
+                List(2) {
+                    Plasma()
+                }
+            } else {
+                listOf(Plasma())
+            }
+        }
+
+        Chill.ID -> {
+            val aliveMonsterCount = AbstractDungeon.getMonsters().aliveMonsters.size
+            List(aliveMonsterCount * magicNumber) {
+                Frost()
+            }
+        }
+
+        Darkness.ID -> {
+            listOf(Dark())
+        }
+
+        DoomAndGloom.ID -> {
+            listOf(Dark())
+        }
+
+        Fusion.ID -> {
+            List(magicNumber) {
                 Plasma()
             }
-        } else {
-            listOf(Plasma())
         }
-    }
 
-    Chill.ID -> {
-        val aliveMonsterCount = AbstractDungeon.getMonsters().aliveMonsters.size
-        List(aliveMonsterCount * magicNumber) {
-            Frost()
+        Glacier.ID -> {
+            List(magicNumber) {
+                Frost()
+            }
         }
-    }
 
-    Darkness.ID -> {
-        listOf(Dark())
-    }
-
-    DoomAndGloom.ID -> {
-        listOf(Dark())
-    }
-
-    Fusion.ID -> {
-        List(magicNumber) {
-            Plasma()
+        Tempest.ID -> {
+            var count = EnergyPanel.totalCount
+            if (AbstractDungeon.player.hasRelic(ChemicalX.ID)) {
+                count += 2
+            }
+            List(count) {
+                Lightning()
+            }
         }
-    }
 
-    Glacier.ID -> {
-        List(magicNumber) {
-            Frost()
+        Electrodynamics.ID -> {
+            List(magicNumber) {
+                Lightning()
+            }
         }
-    }
 
-    Tempest.ID -> {
-        var count = EnergyPanel.totalCount
-        if (AbstractDungeon.player.hasRelic(ChemicalX.ID)) {
-            count += 2
+        MeteorStrike.ID -> {
+            List(magicNumber) {
+                Plasma()
+            }
         }
-        List(count) {
+
+        Rainbow.ID -> {
+            listOf(
+                Lightning(),
+                Frost(),
+                Dark(),
+            )
+        }
+
+        else -> emptyList()
+    } + if (type == CardType.POWER && AbstractDungeon.player.hasPower(StormPower.POWER_ID)) {
+        val stormPower = AbstractDungeon.player.getPower(StormPower.POWER_ID)
+        List(stormPower.amount) {
             Lightning()
         }
+    } else {
+        emptyList()
     }
-
-    Electrodynamics.ID -> {
-        List(magicNumber) {
-            Lightning()
-        }
-    }
-
-    MeteorStrike.ID -> {
-        List(magicNumber) {
-            Plasma()
-        }
-    }
-
-    Rainbow.ID -> {
-        listOf(
-            Lightning(),
-            Frost(),
-            Dark(),
-        )
-    }
-
-    else -> emptyList()
 }
 
 fun AbstractCard.getActionHitCount(): Int = when (cardID) {
