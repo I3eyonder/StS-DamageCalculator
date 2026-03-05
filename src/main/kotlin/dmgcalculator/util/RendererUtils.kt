@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.megacrit.cardcrawl.helpers.FontHelper
+import dmgcalculator.config.ModConfig
 import dmgcalculator.entities.Outcome
 import dmgcalculator.entities.Range
 import dmgcalculator.entities.sorted
@@ -156,35 +157,37 @@ fun StringBuilder.buildOutcomeMessage(
         )
     )
 
-    // --- Blocked amount ---
-    if (worstOutcome.blocked == bestOutcome.blocked) {
-        if (bestOutcome.blocked > 0) {
+    // --- Blocked amount --- (only if enabled in config)
+    if (ModConfig.showBlockInfo) {
+        if (worstOutcome.blocked == bestOutcome.blocked) {
+            if (bestOutcome.blocked > 0) {
+                append("\n")
+                    .append(
+                        "(%s blocked)".format(
+                            bestOutcome.blocked.toString().colored("#00FF00"),
+                        )
+                    )
+                    .append("\n")
+                    .append(
+                        "(%s blocks remaining)".format(
+                            bestOutcome.remainBlock.toString().colored("#00FF00"),
+                        )
+                    )
+            }
+        } else {
             append("\n")
                 .append(
                     "(%s blocked)".format(
-                        bestOutcome.blocked.toString().colored("#00FF00"),
+                        Range(worstOutcome.blocked, bestOutcome.blocked).sorted().colored("#00FF00"),
                     )
                 )
                 .append("\n")
                 .append(
                     "(%s blocks remaining)".format(
-                        bestOutcome.remainBlock.toString().colored("#00FF00"),
+                        Range(worstOutcome.remainBlock, bestOutcome.remainBlock).sorted().colored("#00FF00"),
                     )
                 )
         }
-    } else {
-        append("\n")
-            .append(
-                "(%s blocked)".format(
-                    Range(worstOutcome.blocked, bestOutcome.blocked).sorted().colored("#00FF00"),
-                )
-            )
-            .append("\n")
-            .append(
-                "(%s blocks remaining)".format(
-                    Range(worstOutcome.remainBlock, bestOutcome.remainBlock).sorted().colored("#00FF00"),
-                )
-            )
     }
 
     // --- Extra info ---

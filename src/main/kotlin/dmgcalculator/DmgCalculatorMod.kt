@@ -13,6 +13,7 @@ import com.evacipated.cardcrawl.modthespire.ModInfo
 import com.evacipated.cardcrawl.modthespire.Patcher
 import com.evacipated.cardcrawl.modthespire.lib.SpireInitializer
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
+import dmgcalculator.config.ModConfigPanel
 import dmgcalculator.interfaces.PlayerEndTurnSubscriber
 import dmgcalculator.publisher.PlayerEndTurnPublisher
 import dmgcalculator.renderer.MonsterRenderer
@@ -65,14 +66,14 @@ class DmgCalculatorMod : PostInitializeSubscriber,
         //Set up the mod information displayed in the in-game mods menu.
         //The information used is taken from your pom.xml file.
 
-        //If you want to set up a config panel, that will be done here.
-        //You can find information about this on the BaseMod wiki page "Mod Config and Panel".
+        //Register the config panel
+        val configPanel = ModConfigPanel.createPanel()
         BaseMod.registerModBadge(
             badgeTexture,
             info!!.Name,
             info!!.Authors?.joinToString(", "),
             info!!.Description,
-            null
+            configPanel
         )
     }
 
