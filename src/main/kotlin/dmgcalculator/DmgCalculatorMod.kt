@@ -3,7 +3,7 @@ package dmgcalculator
 import basemod.BaseMod
 import basemod.interfaces.OnPlayerTurnStartSubscriber
 import basemod.interfaces.PostInitializeSubscriber
-import basemod.interfaces.PostRenderSubscriber
+import basemod.interfaces.RenderSubscriber
 import com.badlogic.gdx.Files
 import com.badlogic.gdx.backends.lwjgl.LwjglFileHandle
 import com.badlogic.gdx.files.FileHandle
@@ -25,7 +25,7 @@ import java.util.*
 
 @SpireInitializer
 class DmgCalculatorMod : PostInitializeSubscriber,
-    PostRenderSubscriber,
+    RenderSubscriber,
     OnPlayerTurnStartSubscriber,
     PlayerEndTurnSubscriber {
 
@@ -37,7 +37,7 @@ class DmgCalculatorMod : PostInitializeSubscriber,
         logger.info("$modID subscribed to DmgCalculationMod.")
     }
 
-    override fun receivePostRender(spriteBatch: SpriteBatch?) {
+    override fun receiveRender(spriteBatch: SpriteBatch?) {
         if (AbstractDungeon.isScreenUp) return
         if (AbstractDungeon.getCurrMapNode() == null) return
         if (AbstractDungeon.getMonsters() == null) return
