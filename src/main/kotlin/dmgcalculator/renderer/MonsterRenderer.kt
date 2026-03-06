@@ -11,11 +11,7 @@ import com.megacrit.cardcrawl.cards.purple.PressurePoints
 import com.megacrit.cardcrawl.cards.purple.SashWhip
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
-import com.megacrit.cardcrawl.orbs.AbstractOrb
-import com.megacrit.cardcrawl.orbs.Dark
-import com.megacrit.cardcrawl.orbs.EmptyOrbSlot
-import com.megacrit.cardcrawl.orbs.Frost
-import com.megacrit.cardcrawl.orbs.Lightning
+import com.megacrit.cardcrawl.orbs.*
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.MarkPower
 import com.megacrit.cardcrawl.powers.watcher.VigorPower
@@ -361,8 +357,8 @@ object MonsterRenderer {
         aliveMonsterCount: Int,
     ): Action {
         val player = AbstractDungeon.player
-        val cardHitCount = getActionHitCount()
         calculateCardDamage(monster)
+        val cardHitCount = getActionHitCount()
         val damagePerHit = getDamagePerHit(monsterIndex)
         val orbDamageMultiplier = if (monster.hasPower(LockOnPower.POWER_ID)) 1.5f else 1f
         fun MutableList<Action>.addOrbEvokeAction(orbsToEvoke: AbstractOrb) {

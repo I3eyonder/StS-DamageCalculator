@@ -322,6 +322,8 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
 
 fun AbstractCard.getDamagePerHit(monsterIndex: Int): Int = if (multiDamage != null) {
     multiDamage[monsterIndex]
-} else {
+} else if (baseDamage >= 0) {
     damage
+} else {
+    0
 }
