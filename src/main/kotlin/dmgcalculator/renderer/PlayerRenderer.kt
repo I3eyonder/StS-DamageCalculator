@@ -158,7 +158,10 @@ object PlayerRenderer {
             player.relics.forEach { relic ->
                 when (relic.relicId) {
                     Orichalcum.ID -> {
-                        if (player.currentBlock == 0 || (relic as Orichalcum).trigger) {
+                        val willCardGainBlock = cardActions.flatten().any {
+                            it is Action.GainBlock && it.value > 0
+                        }
+                        if ((player.currentBlock == 0 && !willCardGainBlock) || (relic as Orichalcum).trigger) {
                             addToTop(Action.GainBlock(6))
                         }
                     }
