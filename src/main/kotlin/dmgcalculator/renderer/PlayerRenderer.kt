@@ -32,7 +32,16 @@ object PlayerRenderer {
 
     fun render(sb: SpriteBatch, hoveredCard: AbstractCard?, isPlayerTurn: Boolean) {
         val msg = if (isPlayerTurn) {
+            cachedMsg = null
             getIntentActions(hoveredCard).calculateOutcome(
+                CreatureInfo(AbstractDungeon.player)
+            ).let { (worstOutcome, bestOutcome) ->
+                buildString {
+                    buildOutcomeMessage(worstOutcome, bestOutcome)
+                }
+            }
+        } else if (cachedMsg.isNullOrEmpty()) {
+            getIntentActions().calculateOutcome(
                 CreatureInfo(AbstractDungeon.player)
             ).let { (worstOutcome, bestOutcome) ->
                 buildString {
@@ -78,7 +87,7 @@ object PlayerRenderer {
         }
     }
 
-    private fun getIntentActions(hoveredCard: AbstractCard?): List<Action> {
+    private fun getIntentActions(hoveredCard: AbstractCard? = null): List<Action> {
         val player = AbstractDungeon.player
         //Resolve card actions
         val cardActions = hoveredCard?.let { hoveringCard ->
