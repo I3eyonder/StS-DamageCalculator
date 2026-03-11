@@ -192,7 +192,9 @@ object MonsterRenderer {
 
         // Apply Necronomicon relic if needed
         player.getRelic(Necronomicon.ID)?.let { necronomiconRelic ->
-            if (type == CardType.ATTACK && necronomiconRelic.checkTrigger()) {
+            if (type == CardType.ATTACK &&
+                (costForTurn >= 2 && !freeToPlayOnce || cost == -1 && energyOnUse >= 2) &&
+                necronomiconRelic.checkTrigger()) {
                 actions.addToBottom(createDuplicationAttackAction())
             }
         }
