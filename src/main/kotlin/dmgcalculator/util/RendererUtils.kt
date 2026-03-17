@@ -149,13 +149,16 @@ fun StringBuilder.buildOutcomeMessage(
     worstOutcome: Outcome,
     bestOutcome: Outcome,
     showRemainHP: Boolean = true,
+    showTakenDamage: Boolean = true,
 ) {
-    // --- Deal damage ---
-    append(
-        "Take %s damage".format(
-            Range(worstOutcome.damage, bestOutcome.damage).sorted().colored("#FF0000")
+    // --- Taken damage ---
+    if (showTakenDamage) {
+        append(
+            "Take %s damage".format(
+                Range(worstOutcome.damage, bestOutcome.damage).sorted().colored("#FF0000")
+            )
         )
-    )
+    }
 
     // --- Blocked amount --- (only if enabled in config)
     if (ModConfig.showBlockInfo) {

@@ -43,7 +43,7 @@ class DmgCalculatorMod : PostInitializeSubscriber,
         if (AbstractDungeon.getMonsters() == null) return
         if (AbstractDungeon.player == null) return
         spriteBatch?.let {
-            val hoveredCard = AbstractDungeon.player.hoveredCard?.makeStatEquivalentCopy()?.apply {
+            val hoveredCard = AbstractDungeon.player.hoveredCard?.makeSameInstanceOf()?.apply {
                 applyPowers()
             }
             PlayerRenderer.render(it, hoveredCard, isPlayerTurn)

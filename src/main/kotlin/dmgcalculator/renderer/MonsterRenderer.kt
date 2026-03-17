@@ -78,9 +78,9 @@ object MonsterRenderer {
             if (worstCardOutcome != null && bestCardOutcome != null) {
                 val showCardRemainHP = bestCardOutcome.isDead || endTurnIntentActions.isEmpty()
                 msgBuilder.buildOutcomeMessage(
-                    worstCardOutcome,
-                    bestCardOutcome,
-                    showCardRemainHP
+                    worstOutcome = worstCardOutcome,
+                    bestOutcome = bestCardOutcome,
+                    showRemainHP = showCardRemainHP
                 )
                 if (!showCardRemainHP) {
                     msgBuilder.append("\n")
@@ -107,8 +107,8 @@ object MonsterRenderer {
                         )
                     )
                     msgBuilder.buildOutcomeMessage(
-                        worstEndTurnCalculatedOutcome,
-                        bestEndTurnCalculatedOutcome,
+                        worstOutcome = worstEndTurnCalculatedOutcome,
+                        bestOutcome = bestEndTurnCalculatedOutcome,
                     )
                 }
             } else if (endTurnIntentActions.isNotEmpty()) {
@@ -118,8 +118,8 @@ object MonsterRenderer {
                     creatureInfo
                 )
                 msgBuilder.buildOutcomeMessage(
-                    worstEndTurnOutcome,
-                    bestEndTurnOutcome,
+                    worstOutcome = worstEndTurnOutcome,
+                    bestOutcome = bestEndTurnOutcome,
                 )
             }
             val msg = msgBuilder.toString()
