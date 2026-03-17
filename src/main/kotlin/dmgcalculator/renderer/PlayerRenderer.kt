@@ -5,6 +5,7 @@ import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.AbstractCard.CardType
 import com.megacrit.cardcrawl.cards.colorless.BandageUp
 import com.megacrit.cardcrawl.cards.colorless.Bite
+import com.megacrit.cardcrawl.cards.colorless.RitualDagger
 import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.status.Burn
@@ -76,7 +77,9 @@ object PlayerRenderer {
             }
         }
         if (block > 0) {
-            add(Action.GainBlock(block))
+            if (cardID !in listOf(RitualDagger.ID)) {
+                add(Action.GainBlock(block))
+            }
         }
 
         // Healing effects

@@ -5,7 +5,6 @@ import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.powers.CurlUpPower
 import com.megacrit.cardcrawl.powers.EnvenomPower
-import com.megacrit.cardcrawl.powers.MalleablePower
 import com.megacrit.cardcrawl.powers.SadisticPower
 import com.megacrit.cardcrawl.relics.Boot
 import com.megacrit.cardcrawl.relics.HandDrill
