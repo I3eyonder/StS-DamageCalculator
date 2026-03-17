@@ -8,10 +8,12 @@ import com.megacrit.cardcrawl.cards.green.*
 import com.megacrit.cardcrawl.cards.purple.*
 import com.megacrit.cardcrawl.cards.red.*
 import com.megacrit.cardcrawl.cards.tempCards.Expunger
+import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.orbs.*
 import com.megacrit.cardcrawl.powers.CorruptionPower
 import com.megacrit.cardcrawl.powers.DarkEmbracePower
+import com.megacrit.cardcrawl.powers.PoisonPower
 import com.megacrit.cardcrawl.powers.StormPower
 import com.megacrit.cardcrawl.relics.ChemicalX
 import com.megacrit.cardcrawl.ui.panels.EnergyPanel
@@ -25,7 +27,7 @@ private val randomAttackCards = listOf(
     ThunderStrike.ID,
 )
 
-private val giveVulnearableCards = listOf(
+private val giveVulnerableCards = listOf(
     Bash.ID,
     ThunderClap.ID,
     Shockwave.ID,
@@ -91,6 +93,15 @@ private val orbChannelCards = listOf(
     Rainbow.ID,
 )
 
+private val givePoisonCards = listOf(
+    DeadlyPoison.ID,
+    PoisonedStab.ID,
+    Catalyst.ID,
+    CripplingPoison.ID,
+    CorpseExplosion.ID,
+    BouncingFlask.ID,
+)
+
 val AbstractCard.isOrbChannelCard: Boolean
     get() = orbChannelCards.contains(cardID)
 
@@ -100,11 +111,14 @@ val AbstractCard.isOrbEvokeCard: Boolean
 val AbstractCard.isRandomAttackCard: Boolean
     get() = randomAttackCards.contains(cardID)
 
-val AbstractCard.canGiveVulnearable: Boolean
-    get() = giveVulnearableCards.contains(cardID)
+val AbstractCard.canGiveVulnerable: Boolean
+    get() = giveVulnerableCards.contains(cardID)
 
 val AbstractCard.isDebuffCard: Boolean
     get() = applyDebuffCards.contains(cardID)
+
+val AbstractCard.canGivePoison: Boolean
+    get() = givePoisonCards.contains(cardID)
 
 fun AbstractCard.getDebuffInstanceCount(): Int = when {
     cardID == Shockwave.ID -> 2
@@ -112,8 +126,26 @@ fun AbstractCard.getDebuffInstanceCount(): Int = when {
     cardID == CripplingPoison.ID -> 2
     cardID == CorpseExplosion.ID -> 2
     cardID == Malaise.ID -> 2
-    cardID == BouncingFlask.ID -> 3
+    cardID == BouncingFlask.ID -> magicNumber
     isDebuffCard -> 1
+    else -> 0
+}
+
+fun AbstractCard.getPoisonAmount(target: AbstractCreature): Int = when (cardID) {
+    DeadlyPoison.ID,
+    PoisonedStab.ID,
+    CripplingPoison.ID,
+    CorpseExplosion.ID,
+        -> magicNumber
+
+    Catalyst.ID -> {
+        target.getPower(PoisonPower.POWER_ID)?.amount?.times(
+            if (upgraded) 2 else 1
+        ) ?: 0
+    }
+
+    BouncingFlask.ID -> 3
+
     else -> 0
 }
 
@@ -282,7 +314,7 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
     TwinStrike.ID -> 2
     RiddleWithHoles.ID -> 5
     Pummel.ID, Tantrum.ID, SwordBoomerang.ID, Ragnarok.ID,
-    RipAndTear.ID, Expunger.ID,
+    RipAndTear.ID, Expunger.ID, BouncingFlask.ID,
         -> magicNumber
 
     Whirlwind.ID, Skewer.ID, ReinforcedBody.ID,

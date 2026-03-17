@@ -1,21 +1,11 @@
 package dmgcalculator.util
 
-import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.monsters.MonsterGroup
-import com.megacrit.cardcrawl.orbs.EmptyOrbSlot
-import com.megacrit.cardcrawl.orbs.Frost
-import com.megacrit.cardcrawl.orbs.Lightning
-import com.megacrit.cardcrawl.powers.*
-import com.megacrit.cardcrawl.powers.watcher.OmegaPower
-import com.megacrit.cardcrawl.relics.CloakClasp
-import com.megacrit.cardcrawl.relics.Orichalcum
-import com.megacrit.cardcrawl.relics.StoneCalendar
+import com.megacrit.cardcrawl.powers.AbstractPower
 import dmgcalculator.entities.Action
-import dmgcalculator.entities.ActionTarget
-import dmgcalculator.util.Utils.addToBottom
 import dmgcalculator.util.Utils.isAttackingIntent
 
 fun AbstractMonster.getIntentMultiAmt(): Int {
@@ -64,127 +54,6 @@ val List<AbstractMonster>.aliveMonsterNumber: Int
 
 fun AbstractPlayer.getHoveredMonster(): AbstractMonster? {
     return getPrivateField("hoveredMonster")
-}
-
-fun AbstractPlayer.getEndTurnIntentActions(
-    monster: AbstractMonster,
-    aliveMonsterCount: Int,
-    hoveredCard: AbstractCard?,
-): List<Action> = buildList {
-    // relics damage
-    relics.forEach { relic ->
-        when (relic.relicId) {
-            StoneCalendar.ID -> {
-                if (relic.counter == 7) {
-                    addToBottom(Action.DamageThorns(52))
-                }
-            }
-
-            Orichalcum.ID -> {
-                if (currentBlock == 0 || (relic as Orichalcum).trigger)
-                    if (hasPower(JuggernautPower.POWER_ID)) {
-                        val juggernautPower = getPower(JuggernautPower.POWER_ID)
-                        if (aliveMonsterCount > 1) {
-                            addToBottom(
-                                Action.DamageThorns(
-                                    0,
-                                    juggernautPower.amount,
-                                    ActionTarget.Random
-                                )
-                            )
-                        } else {
-                            addToBottom(
-                                Action.DamageThorns(
-                                    juggernautPower.amount,
-                                    ActionTarget.All
-                                )
-                            )
-                        }
-                    }
-            }
-
-            CloakClasp.ID -> {
-                if (hand.group.isNotEmpty())
-                    if (hasPower(JuggernautPower.POWER_ID)) {
-                        val juggernautPower = getPower(JuggernautPower.POWER_ID)
-                        if (aliveMonsterCount > 1) {
-                            addToBottom(
-                                Action.DamageThorns(
-                                    0,
-                                    juggernautPower.amount,
-                                    ActionTarget.Random
-                                )
-                            )
-                        } else {
-                            addToBottom(
-                                Action.DamageThorns(
-                                    juggernautPower.amount,
-                                    ActionTarget.All
-                                )
-                            )
-                        }
-                    }
-            }
-        }
-    }
-
-    // orbs damage
-    val playerOrbs = orbs.plus(hoveredCard?.getChannelingOrbs().orEmpty()).filterNot {
-        it is EmptyOrbSlot
-    }.takeLast(maxOrbs).let {
-        if (hoveredCard?.isOrbEvokeCard == true) {
-            it.drop(1)
-        } else {
-            it
-        }
-    }
-    val orbDamageMultiplier = if (monster.hasPower(LockOnPower.POWER_ID)) 1.5f else 1f
-    playerOrbs.forEach { orb ->
-        when (orb.ID) {
-            Lightning.ORB_ID -> {
-                val damageAmount = orb.passiveAmount.times(orbDamageMultiplier).toInt()
-                if (hasPower(ElectroPower.POWER_ID)) {
-                    addToBottom(Action.DamageThorns(damageAmount))
-                } else {
-                    addToBottom(Action.DamageThorns(0, damageAmount, ActionTarget.Random))
-                }
-            }
-
-            Frost.ORB_ID -> {
-                if (hasPower(JuggernautPower.POWER_ID)) {
-                    val juggernautPower = getPower(JuggernautPower.POWER_ID)
-                    if (aliveMonsterCount > 1) {
-                        add(
-                            Action.DamageThorns(
-                                0,
-                                juggernautPower.amount,
-                                ActionTarget.Random,
-                            )
-                        )
-                    } else {
-                        add(
-                            Action.DamageThorns(
-                                juggernautPower.amount,
-                                ActionTarget.All,
-                            )
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    // powers damage
-    powers.forEach { power ->
-        when {
-            power.ID == CombustPower.POWER_ID ||
-                    power.ID == OmegaPower.POWER_ID -> addToBottom(Action.DamageThorns(power.amount))
-
-            power.ID.contains(TheBombPower.POWER_ID) && power.amount == 1 -> power.getPrivateField<Int>("damage")?.let {
-                addToBottom(Action.DamageThorns(it))
-            }
-        }
-    }
 }
 
 fun <T> AbstractCreature.temporaryRemoveAmountFromPowers(

@@ -359,7 +359,16 @@ object PlayerRenderer {
         // Resolve monster attack intent
         val monsterAttackIntentActions = AbstractDungeon.getMonsters().aliveMonsters.getAttackIntentActions()
 
-        return (relicEffect + powerPreHandEffects + handDamageActions + orbsActions + powerAfterHandEffects + monsterAttackIntentActions).flatten()
+        val startOfNextTurnActions = buildList {
+            if (player.hasPower(PoisonPower.POWER_ID)) {
+                val poisonPower = player.getPower(PoisonPower.POWER_ID)
+                addToBottom(Action.LoseHP(poisonPower.amount, player))
+            }
+        }
+
+        return (relicEffect + powerPreHandEffects + handDamageActions +
+                orbsActions + powerAfterHandEffects + monsterAttackIntentActions +
+                startOfNextTurnActions).flatten()
     }
 
 }

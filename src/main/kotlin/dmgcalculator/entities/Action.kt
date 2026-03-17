@@ -31,6 +31,13 @@ sealed class Action(open val min: Int, open val max: Int) {
         constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, false))
     }
 
+    data class StackPoison(
+        val value: Int,
+        val target: ActionTarget,
+    ) : Action(value, value) {
+        constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, false))
+    }
+
     data class GainHP(val value: Int) : Action(value, value)
     data class GainBlock(val value: Int) : Action(value, value)
     data object RefineStats : Action(0, 0)
