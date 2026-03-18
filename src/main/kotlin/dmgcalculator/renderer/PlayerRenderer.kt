@@ -185,7 +185,7 @@ object PlayerRenderer {
             val baseAction = List(cardHitCount) {
                 hoveringCard.createIntentActions().asGroupedAction()
             }.asGroupedAction()
-            val actions = mutableListOf(baseAction)
+            val actions = mutableListOf<Action>(baseAction)
             AbstractDungeon.player.powers.forEach { power ->
                 when (power.ID) {
                     DoubleTapPower.POWER_ID -> {
@@ -214,6 +214,11 @@ object PlayerRenderer {
                 if (hoveringCard.type == CardType.ATTACK && necronomiconRelic.checkTrigger()) {
                     actions.addToBottom(baseAction)
                 }
+            }
+
+            // Apply BirdFacedUrn relic if needed
+            if (player.hasRelic(BirdFacedUrn.ID) && hoveringCard.type == CardType.POWER) {
+                actions.addToBottom(Action.GainHP(2))
             }
 
             // Apply FeelNoPain power if needed
