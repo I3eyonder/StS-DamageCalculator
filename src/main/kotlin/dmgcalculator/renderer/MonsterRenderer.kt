@@ -546,8 +546,7 @@ object MonsterRenderer {
                 }
 
                 // Apply player's Juggernaut power if needed
-                if (player.hasPower(JuggernautPower.POWER_ID)) {
-                    val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
+                player.getPower(JuggernautPower.POWER_ID)?.let { juggernautPower ->
                     if (type == CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
                         if (aliveMonsterCount > 1) {
                             add(
@@ -566,7 +565,25 @@ object MonsterRenderer {
                             )
                         }
                     }
-                    if (block > 0) {
+                    if (player.hasPower(AfterImagePower.POWER_ID)) {
+                        if (aliveMonsterCount > 1) {
+                            add(
+                                Action.DamageThorns(
+                                    0,
+                                    juggernautPower.amount,
+                                    ActionTarget.Random
+                                )
+                            )
+                        } else {
+                            add(
+                                Action.DamageThorns(
+                                    juggernautPower.amount,
+                                    ActionTarget.Single(monster)
+                                )
+                            )
+                        }
+                    }
+                    if (block > 0 && !isFakeGainBlockCard) {
                         if (aliveMonsterCount > 1) {
                             add(
                                 Action.DamageThorns(

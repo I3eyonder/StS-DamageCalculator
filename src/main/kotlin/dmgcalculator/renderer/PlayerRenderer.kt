@@ -132,6 +132,9 @@ object PlayerRenderer {
                 add(Action.GainBlock(ragePower.amount, player))
             }
         }
+        player.getPower(AfterImagePower.POWER_ID)?.let { afterImagePower ->
+            add(Action.GainBlock(afterImagePower.amount, player))
+        }
         player.getHoveredMonster()?.let { hoveredMonster ->
             hoveredMonster.getPower(BlockReturnPower.POWER_ID)?.let { blockReturnPower ->
                 if (type == CardType.ATTACK) {
@@ -139,10 +142,8 @@ object PlayerRenderer {
                 }
             }
         }
-        if (block > 0) {
-            if (cardID !in listOf(RitualDagger.ID)) {
-                add(Action.GainBlock(block, player))
-            }
+        if (block > 0 && !isFakeGainBlockCard) {
+            add(Action.GainBlock(block, player))
         }
 
         // Healing or Losing HP effects

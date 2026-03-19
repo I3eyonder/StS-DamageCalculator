@@ -102,6 +102,10 @@ private val givePoisonCards = listOf(
     BouncingFlask.ID,
 )
 
+private val fakeGainBlockCards = listOf(
+    RitualDagger.ID,
+)
+
 val AbstractCard.isOrbChannelCard: Boolean
     get() = orbChannelCards.contains(cardID)
 
@@ -119,6 +123,9 @@ val AbstractCard.isDebuffCard: Boolean
 
 val AbstractCard.canGivePoison: Boolean
     get() = givePoisonCards.contains(cardID)
+
+val AbstractCard.isFakeGainBlockCard: Boolean
+    get() = fakeGainBlockCards.contains(cardID)
 
 fun AbstractCard.getDebuffInstanceCount(): Int = when {
     cardID == Shockwave.ID -> 2
