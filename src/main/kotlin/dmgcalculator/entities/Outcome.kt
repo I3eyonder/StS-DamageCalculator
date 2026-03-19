@@ -35,6 +35,7 @@ fun Outcome.apply(
     useMax: Boolean,
     creatureInfo: CreatureInfo,
 ) {
+    val player = AbstractDungeon.player
     when (action) {
         is Action.GainHP -> {
             if (remainHP > 0) {
@@ -137,11 +138,12 @@ fun Outcome.apply(
                     hasCurlUpPower = false
                 }
 
-                // Apply EnvenomPower
-                if (creatureInfo.creature.hasPower(EnvenomPower.POWER_ID)) {
-                    if (creatureInfo.creature.hasPower(SadisticPower.POWER_ID)) {
-                        val sadisticPower = creatureInfo.creature.getPower(SadisticPower.POWER_ID)
-                        damage += sadisticPower.amount
+                if (creatureInfo.creature is AbstractMonster) {
+                    // Apply EnvenomPower
+                    player.getPower(EnvenomPower.POWER_ID)?.let { envenomPower ->
+                        player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
+                            damage += sadisticPower.amount
+                        }
                     }
                 }
 
