@@ -39,8 +39,7 @@ object MonsterRenderer {
         aliveMonstersIndexed.forEach { (index, monster) ->
             msgBuilder.clear()
             val creatureInfo = CreatureInfo(monster)
-            val cardActions = hoveredCard?.getIntentActions(monster, index, aliveMonsterCount)
-            val (worstCardOutcome, bestCardOutcome) = cardActions?.run {
+            val cardActions = hoveredCard?.getIntentActions(monster, index, aliveMonsterCount)?.run {
                 if (hoveredMonster != null) {
                     this.filter { action ->
                         action.target.let { target ->
@@ -54,7 +53,8 @@ object MonsterRenderer {
                 } else {
                     this
                 }
-            }?.calculateOutcome(creatureInfo) ?: (null to null)
+            }
+            val (worstCardOutcome, bestCardOutcome) = cardActions?.calculateOutcome(creatureInfo) ?: (null to null)
             val endTurnIntentActions =
                 monster.getEndTurnIntentActions(player, aliveMonsterCount, hoveredCard, cardActions)
             if (worstCardOutcome != null && bestCardOutcome != null) {
