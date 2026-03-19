@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.AbstractCard.CardType
 import com.megacrit.cardcrawl.cards.blue.GoForTheEyes
+import com.megacrit.cardcrawl.cards.green.Bane
 import com.megacrit.cardcrawl.cards.green.BouncingFlask
 import com.megacrit.cardcrawl.cards.purple.CrushJoints
 import com.megacrit.cardcrawl.cards.purple.Indignation
@@ -550,6 +551,9 @@ object MonsterRenderer {
                         add(Action.DamageNormal(0, damagePerHit, ActionTarget.Random))
                     } else {
                         add(Action.DamageNormal(damagePerHit, monster))
+                        if (cardID == Bane.ID && monster.hasPower(PoisonPower.POWER_ID)) {
+                            add(Action.DamageNormal(damagePerHit, monster))
+                        }
                     }
                 }
 
