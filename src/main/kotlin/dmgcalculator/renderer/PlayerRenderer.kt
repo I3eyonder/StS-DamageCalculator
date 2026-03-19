@@ -127,26 +127,28 @@ object PlayerRenderer {
 
     private fun AbstractCard.createIntentActions(): List<Action> = buildList {
         val player = AbstractDungeon.player
-        if (type == CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
-            add(Action.GainBlock((player.getPower(RagePower.POWER_ID).amount)))
+        player.getPower(RagePower.POWER_ID)?.let { ragePower ->
+            if (type == CardType.ATTACK) {
+                add(Action.GainBlock(ragePower.amount, player))
+            }
         }
         player.getHoveredMonster()?.let { hoveredMonster ->
             hoveredMonster.getPower(BlockReturnPower.POWER_ID)?.let { blockReturnPower ->
                 if (type == CardType.ATTACK) {
-                    add(Action.GainBlock(blockReturnPower.amount))
+                    add(Action.GainBlock(blockReturnPower.amount, player))
                 }
             }
         }
         if (block > 0) {
             if (cardID !in listOf(RitualDagger.ID)) {
-                add(Action.GainBlock(block))
+                add(Action.GainBlock(block, player))
             }
         }
 
         // Healing or Losing HP effects
         when (cardID) {
             BandageUp.ID, Bite.ID -> {
-                add(Action.GainHP(magicNumber))
+                add(Action.GainHP(magicNumber, player))
             }
 
             Offering.ID -> {
@@ -218,7 +220,7 @@ object PlayerRenderer {
 
             // Apply BirdFacedUrn relic if needed
             if (player.hasRelic(BirdFacedUrn.ID) && hoveringCard.type == CardType.POWER) {
-                actions.addToBottom(Action.GainHP(2))
+                actions.addToBottom(Action.GainHP(2, player))
             }
 
             // Apply FeelNoPain power if needed
@@ -231,14 +233,14 @@ object PlayerRenderer {
                         listOf(action)
                             .plus(
                                 if (exhaustInfo.selfExhaust && index == 0) {
-                                    Action.GainBlock(feelNoPainPower.amount)
+                                    Action.GainBlock(feelNoPainPower.amount, player)
                                 } else {
                                     Action.NoAction
                                 }
                             )
                             .plus(
                                 List(exhaustInfo.exhaustInHand.size + exhaustInfo.exhaustInDrawPile) {
-                                    Action.GainBlock(feelNoPainPower.amount)
+                                    Action.GainBlock(feelNoPainPower.amount, player)
                                 }
                             )
                             .asGroupedAction()
@@ -279,19 +281,19 @@ object PlayerRenderer {
                             it is Action.GainBlock && it.value > 0
                         }
                         if ((player.currentBlock == 0 && !willCardGainBlock) || (relic as Orichalcum).trigger) {
-                            addToTop(Action.GainBlock(6))
+                            addToTop(Action.GainBlock(6, player))
                         }
                     }
 
                     CloakClasp.ID -> {
                         if (!remainingHandCards.isEmpty()) {
-                            addToBottom(Action.GainBlock(remainingHandCards.size))
+                            addToBottom(Action.GainBlock(remainingHandCards.size, player))
                         }
                     }
 
                     OrnamentalFan.ID -> {
                         if (hoveredCard?.type == CardType.ATTACK && (relic.counter + 1) % 3 == 0) {
-                            addToBottom(Action.GainBlock(4))
+                            addToBottom(Action.GainBlock(4, player))
                         }
                     }
                 }
@@ -304,11 +306,11 @@ object PlayerRenderer {
                 when (power.ID) {
                     PlatedArmorPower.POWER_ID,
                     MetallicizePower.POWER_ID,
-                        -> addToBottom(Action.GainBlock(power.amount.coerceAtLeast(0)))
+                        -> addToBottom(Action.GainBlock(power.amount.coerceAtLeast(0), player))
 
                     LikeWaterPower.POWER_ID -> {
                         if (player.stance.ID == CalmStance.STANCE_ID) {
-                            addToBottom(Action.GainBlock(power.amount))
+                            addToBottom(Action.GainBlock(power.amount, player))
                         }
                     }
                 }
@@ -335,13 +337,13 @@ object PlayerRenderer {
                 }
             accumulateOrbs.dropLast(player.maxOrbs).forEach { evokedOrb ->
                 if (evokedOrb.ID == Frost.ORB_ID) {
-                    addToBottom(Action.GainBlock(evokedOrb.evokeAmount))
+                    addToBottom(Action.GainBlock(evokedOrb.evokeAmount, player))
                 }
 
             }
             accumulateOrbs.takeLast(player.maxOrbs).forEach { retainOrb ->
                 if (retainOrb.ID == Frost.ORB_ID) {
-                    addToBottom(Action.GainBlock(retainOrb.passiveAmount))
+                    addToBottom(Action.GainBlock(retainOrb.passiveAmount, player))
                 }
             }
         }
@@ -355,8 +357,8 @@ object PlayerRenderer {
                         addToBottom(Action.LoseHP(it, player))
                     }
 
-                    RegenerateMonsterPower.POWER_ID -> addToBottom(Action.GainHP(power.amount))
-                    RegenPower.POWER_ID -> addToTop(Action.GainHP(power.amount))
+                    RegenerateMonsterPower.POWER_ID -> addToBottom(Action.GainHP(power.amount, player))
+                    RegenPower.POWER_ID -> addToTop(Action.GainHP(power.amount, player))
                 }
             }
         }

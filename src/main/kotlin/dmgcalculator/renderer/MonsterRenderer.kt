@@ -43,32 +43,12 @@ object MonsterRenderer {
             val (worstCardOutcome, bestCardOutcome) = cardActions?.run {
                 if (hoveredMonster != null) {
                     this.filter { action ->
-                        when (action) {
-                            is Action.DamageNormal -> {
-                                if (action.target is ActionTarget.Single && action.target.filterable) {
-                                    action.target.target == hoveredMonster
-                                } else {
-                                    true
-                                }
+                        action.target.let { target ->
+                            if (target is ActionTarget.Single && target.filterable) {
+                                target.target == hoveredMonster
+                            } else {
+                                true
                             }
-
-                            is Action.DamageThorns -> {
-                                if (action.target is ActionTarget.Single && action.target.filterable) {
-                                    action.target.target == hoveredMonster
-                                } else {
-                                    true
-                                }
-                            }
-
-                            is Action.LoseHP -> {
-                                if (action.target is ActionTarget.Single && action.target.filterable) {
-                                    action.target.target == hoveredMonster
-                                } else {
-                                    true
-                                }
-                            }
-
-                            else -> true
                         }
                     }
                 } else {

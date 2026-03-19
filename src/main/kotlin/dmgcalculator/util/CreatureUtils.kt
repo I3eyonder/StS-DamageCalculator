@@ -2,6 +2,7 @@ package dmgcalculator.util
 
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.core.AbstractCreature
+import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.monsters.MonsterGroup
 import com.megacrit.cardcrawl.powers.AbstractPower
@@ -40,7 +41,7 @@ fun AbstractMonster.getAttackIntentActions(): List<Action> {
         val hits = getIntentMultiAmt()
         val dmgPerHit = this.intentDmg
         List(hits) {
-            Action.DamageNormal(dmgPerHit)
+            Action.DamageNormal(dmgPerHit, AbstractDungeon.player)
         }
     } else {
         emptyList()

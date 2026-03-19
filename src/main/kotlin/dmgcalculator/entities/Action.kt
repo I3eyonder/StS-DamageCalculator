@@ -2,15 +2,15 @@ package dmgcalculator.entities
 
 import com.megacrit.cardcrawl.core.AbstractCreature
 
-sealed class Action(open val min: Int, open val max: Int) {
+sealed class Action(open val min: Int, open val max: Int, open val target: ActionTarget) {
 
-    data class GroupedAction(val actions: List<Action>) : Action(0, 0)
+    data class GroupedAction(val actions: List<Action>) : Action(0, 0, ActionTarget.None)
 
     data class DamageNormal(
         override val min: Int,
         override val max: Int,
-        val target: ActionTarget,
-    ) : Action(min, max) {
+        override val target: ActionTarget,
+    ) : Action(min, max, target) {
         constructor(min: Int, max: Int, target: AbstractCreature) : this(min, max, ActionTarget.Single(target))
         constructor(value: Int, target: ActionTarget = ActionTarget.None) : this(value, value, target)
         constructor(value: Int, target: AbstractCreature) : this(value, value, ActionTarget.Single(target))
@@ -19,29 +19,41 @@ sealed class Action(open val min: Int, open val max: Int) {
     data class DamageThorns(
         override val min: Int,
         override val max: Int,
-        val target: ActionTarget = ActionTarget.All,
-    ) : Action(min, max) {
+        override val target: ActionTarget = ActionTarget.All,
+    ) : Action(min, max, target) {
         constructor(value: Int, target: ActionTarget = ActionTarget.All) : this(value, value, target)
     }
 
     data class LoseHP(
         val value: Int,
-        val target: ActionTarget,
-    ) : Action(value, value) {
+        override val target: ActionTarget,
+    ) : Action(value, value, target) {
         constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, false))
     }
 
     data class StackPoison(
         val value: Int,
-        val target: ActionTarget,
-    ) : Action(value, value) {
+        override val target: ActionTarget,
+    ) : Action(value, value, target) {
+        constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, true))
+    }
+
+    data class GainHP(
+        val value: Int,
+        override val target: ActionTarget,
+    ) : Action(value, value, target) {
         constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, false))
     }
 
-    data class GainHP(val value: Int) : Action(value, value)
-    data class GainBlock(val value: Int) : Action(value, value)
-    data object RefineStats : Action(0, 0)
-    data object NoAction : Action(0, 0)
+    data class GainBlock(
+        val value: Int,
+        override val target: ActionTarget,
+    ) : Action(value, value, target) {
+        constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, false))
+    }
+
+    data object RefineStats : Action(0, 0, ActionTarget.None)
+    data object NoAction : Action(0, 0, ActionTarget.None)
 }
 
 sealed interface ActionTarget {
