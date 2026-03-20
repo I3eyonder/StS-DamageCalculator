@@ -141,6 +141,8 @@ fun Outcome.apply(
                 if (creatureInfo.creature is AbstractMonster) {
                     // Apply EnvenomPower
                     player.getPower(EnvenomPower.POWER_ID)?.let { envenomPower ->
+                        adjustHP -= envenomPower.amount
+                        remainHP = (remainHP - envenomPower.amount).coerceAtLeast(0)
                         player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
                             damage += sadisticPower.amount
                         }
