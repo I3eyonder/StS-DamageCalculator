@@ -159,7 +159,7 @@ fun AbstractCard.getPoisonAmount(target: AbstractCreature): Int = when (cardID) 
 fun AbstractCard.getExhaustInfo(hand: List<SimpleCardInfo>): ExhaustInfo {
     val selfExhaust = when {
         exhaust -> true
-        AbstractDungeon.player.hasPower(CorruptionPower.POWER_ID) && type == AbstractCard.CardType.SKILL -> true
+        AbstractDungeon.player.hasPower(CorruptionPower.POWER_ID) && type == CardType.SKILL -> true
         else -> false
     }
     return when (cardID) {
@@ -193,7 +193,7 @@ fun AbstractCard.getExhaustInfo(hand: List<SimpleCardInfo>): ExhaustInfo {
         SecondWind.ID, SeverSoul.ID -> ExhaustInfo(
             selfExhaust = selfExhaust,
             exhaustInHand = hand.filter {
-                it.type != AbstractCard.CardType.ATTACK && !it.isHovered
+                it.type != CardType.ATTACK && !it.isHovered
             },
         )
 
@@ -345,7 +345,7 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
 
     SecondWind.ID -> {
         AbstractDungeon.player.hand.group.count {
-            it.type != AbstractCard.CardType.ATTACK && it != AbstractDungeon.player.hoveredCard
+            it.type != CardType.ATTACK && it != AbstractDungeon.player.hoveredCard
         }
     }
 
@@ -354,6 +354,22 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
         AbstractDungeon.player.orbs.count {
             it !is EmptyOrbSlot
         }
+    }
+
+    Finisher.ID -> {
+        AbstractDungeon.actionManager.cardsPlayedThisTurn.count {
+            it.type == CardType.ATTACK
+        }
+    }
+
+    Flechettes.ID -> {
+        AbstractDungeon.player.hand.group.count {
+            it.type == CardType.SKILL
+        }
+    }
+
+    BowlingBash.ID -> {
+        AbstractDungeon.getCurrRoom().monsters.aliveMonsters.size
     }
 
     else -> 1
