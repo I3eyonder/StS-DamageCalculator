@@ -524,6 +524,8 @@ object MonsterRenderer {
             }
         }
 
+        var monsterArtifactPowerAmount = monster.getPower(ArtifactPower.POWER_ID)?.amount ?: 0
+
         return List(cardHitCount) {
             buildList {
                 if (damagePerHit > 0) {
@@ -604,39 +606,34 @@ object MonsterRenderer {
                 }
 
                 // Apply player's Sadistic power if needed
-                if (player.hasPower(SadisticPower.POWER_ID)) {
-                    val sadisticPower = player.getPower(SadisticPower.POWER_ID)
+                player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
                     if (isDebuffCard) {
                         val shouldTrigger = when (cardID) {
                             GoForTheEyes.ID -> monster.intentBaseDmg >= 0
                             CrushJoints.ID -> AbstractDungeon.actionManager.cardsPlayedThisCombat.lastOrNull()?.type == CardType.SKILL
                             SashWhip.ID -> AbstractDungeon.actionManager.cardsPlayedThisCombat.lastOrNull()?.type == CardType.ATTACK
                             Indignation.ID -> player.stance.ID == WrathStance.STANCE_ID
-                            BouncingFlask.ID -> {
-                                repeat(getDebuffInstanceCount()) {
-                                    if (aliveMonsterCount > 1) {
-                                        add(Action.DamageThorns(0, sadisticPower.amount, ActionTarget.Random))
-                                    } else {
-                                        add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
-                                    }
-                                }
-                                false
-                            }
 
-                            else -> true
+                            else -> !canGivePoison
                         }
                         if (shouldTrigger) {
                             repeat(getDebuffInstanceCount()) {
-                                add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
+                                if (monsterArtifactPowerAmount-- <= 0) {
+                                    add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
+                                }
                             }
                         }
                     }
                     if (player.hasPower(WaveOfTheHandPower.POWER_ID)) {
                         if (type == CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
-                            add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
+                            if (monsterArtifactPowerAmount-- <= 0) {
+                                add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
+                            }
                         }
                         if (block > 0) {
-                            add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
+                            if (monsterArtifactPowerAmount-- <= 0) {
+                                add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
+                            }
                         }
                     }
                 }
@@ -656,15 +653,32 @@ object MonsterRenderer {
 
                 // Apply poison if needed
                 if (canGivePoison) {
+                    fun applySadisticPowerIfNeed() {
+                        player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
+                            if (aliveMonsterCount > 1) {
+                                add(Action.DamageThorns(0, sadisticPower.amount, ActionTarget.Random))
+                            } else {
+                                add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
+                            }
+                        }
+                    }
                     when (cardID) {
                         BouncingFlask.ID -> {
-                            if (aliveMonsterCount == 1) {
-                                add(Action.StackPoison(getPoisonAmount(monster), monster))
+                            repeat(getDebuffInstanceCount()) {
+                                if (monsterArtifactPowerAmount-- <= 0) {
+                                    if (aliveMonsterCount == 1) {
+                                        add(Action.StackPoison(getPoisonAmount(monster), monster))
+                                    }
+                                    applySadisticPowerIfNeed()
+                                }
                             }
                         }
 
                         else -> {
-                            add(Action.StackPoison(getPoisonAmount(monster), monster))
+                            if (monsterArtifactPowerAmount-- <= 0) {
+                                add(Action.StackPoison(getPoisonAmount(monster), monster))
+                                applySadisticPowerIfNeed()
+                            }
                         }
                     }
                 }

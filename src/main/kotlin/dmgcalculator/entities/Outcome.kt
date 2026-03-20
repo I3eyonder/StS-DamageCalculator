@@ -113,7 +113,7 @@ fun Outcome.apply(
 
                         HandDrill.ID -> {
                             if (blocked > 0 && remainBlock == 0) {
-                                // Ammor broken
+                                // Armor broken
                                 if (AbstractDungeon.player.hasPower(SadisticPower.POWER_ID)) {
                                     val sadisticPower = AbstractDungeon.player.getPower(SadisticPower.POWER_ID)
                                     damage += sadisticPower.amount

@@ -321,7 +321,7 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
     TwinStrike.ID -> 2
     RiddleWithHoles.ID -> 5
     Pummel.ID, Tantrum.ID, SwordBoomerang.ID, Ragnarok.ID,
-    RipAndTear.ID, Expunger.ID, BouncingFlask.ID,
+    RipAndTear.ID, Expunger.ID,
         -> magicNumber
 
     Whirlwind.ID, Skewer.ID, ReinforcedBody.ID,

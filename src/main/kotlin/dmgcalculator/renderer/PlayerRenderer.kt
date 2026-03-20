@@ -6,7 +6,6 @@ import com.megacrit.cardcrawl.cards.AbstractCard.CardType
 import com.megacrit.cardcrawl.cards.colorless.BandageUp
 import com.megacrit.cardcrawl.cards.colorless.Bite
 import com.megacrit.cardcrawl.cards.colorless.JAX
-import com.megacrit.cardcrawl.cards.colorless.RitualDagger
 import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Pain
 import com.megacrit.cardcrawl.cards.curses.Regret
