@@ -141,7 +141,7 @@ object PlayerRenderer {
                 }
             }
         }
-        if (block > 0 && !isFakeGainBlockCard) {
+        if (block > 0 && baseBlock >= 0 && !isFakeGainBlockCard) {
             add(Action.GainBlock(block, player))
         }
 

@@ -585,7 +585,7 @@ object MonsterRenderer {
                             )
                         }
                     }
-                    if (block > 0 && !isFakeGainBlockCard) {
+                    if (block > 0 && baseBlock >= 0 && !isFakeGainBlockCard) {
                         if (aliveMonsterCount > 1) {
                             add(
                                 Action.DamageThorns(
@@ -630,7 +630,7 @@ object MonsterRenderer {
                                 add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
                             }
                         }
-                        if (block > 0) {
+                        if (block > 0 && baseBlock >= 0) {
                             if (monsterArtifactPowerAmount-- <= 0) {
                                 add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
                             }
