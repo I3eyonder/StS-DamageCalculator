@@ -171,6 +171,19 @@ object PlayerRenderer {
         val handCards = AbstractDungeon.player.hand.group.toMutableList()
         //Resolve card actions
         val cardActions = hoveredCard?.let { hoveringCard ->
+            if (hoveringCard.type == CardType.STATUS &&
+                hoveringCard.costForTurn < -1 &&
+                !player.hasRelic(MedicalKit.ID)
+            ) {
+                return@let emptyList()
+            }
+            if (hoveringCard.type == CardType.CURSE &&
+                hoveringCard.costForTurn < -1 &&
+                !player.hasRelic(BlueCandle.ID)
+            ) {
+                return@let emptyList()
+            }
+
             val cardHitCount = hoveringCard.getActionHitCount()
             val baseAction = List(cardHitCount) {
                 hoveringCard.createIntentActions().asGroupedAction()
