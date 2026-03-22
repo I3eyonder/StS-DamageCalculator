@@ -3,6 +3,7 @@ package dmgcalculator.entities
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
+import com.megacrit.cardcrawl.monsters.beyond.Nemesis
 import com.megacrit.cardcrawl.powers.CurlUpPower
 import com.megacrit.cardcrawl.powers.EnvenomPower
 import com.megacrit.cardcrawl.powers.SadisticPower
@@ -67,7 +68,7 @@ fun Outcome.apply(
             }
             // Apply Intangible
             if (creatureInfo.hasIntangiblePlayerPower ||
-                (creatureInfo.hasIntangiblePower && action is Action.DamageNormal)
+                (creatureInfo.hasIntangiblePower && creatureInfo.creature.id == Nemesis.ID)
             ) {
                 damage = damage.coerceAtMost(1)
             }
