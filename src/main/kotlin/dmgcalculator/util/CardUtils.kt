@@ -15,7 +15,9 @@ import com.megacrit.cardcrawl.powers.CorruptionPower
 import com.megacrit.cardcrawl.powers.DarkEmbracePower
 import com.megacrit.cardcrawl.powers.PoisonPower
 import com.megacrit.cardcrawl.powers.StormPower
+import com.megacrit.cardcrawl.relics.BlueCandle
 import com.megacrit.cardcrawl.relics.ChemicalX
+import com.megacrit.cardcrawl.relics.MedicalKit
 import com.megacrit.cardcrawl.ui.panels.EnergyPanel
 import dmgcalculator.entities.ExhaustInfo
 import dmgcalculator.entities.SimpleCardInfo
@@ -381,4 +383,21 @@ fun AbstractCard.getDamagePerHit(monsterIndex: Int): Int = if (multiDamage != nu
     damage
 } else {
     0
+}
+
+fun AbstractCard.isCardPlayable(): Boolean {
+    val player = AbstractDungeon.player
+    if (type == CardType.STATUS &&
+        costForTurn < -1 &&
+        !player.hasRelic(MedicalKit.ID)
+    ) {
+        return false
+    }
+    if (type == CardType.CURSE &&
+        costForTurn < -1 &&
+        !player.hasRelic(BlueCandle.ID)
+    ) {
+        return false
+    }
+    return true
 }

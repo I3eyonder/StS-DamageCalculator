@@ -67,19 +67,24 @@ object MonsterRenderer {
         aliveMonstersIndexed.forEach { (index, monster) ->
             msgBuilder.clear()
             val creatureInfo = CreatureInfo(monster)
-            val cardActions = hoveredCard?.getIntentActions(monster, index, aliveMonsterCount)?.run {
-                if (hoveredMonster != null) {
-                    this.filter { action ->
-                        action.target.let { target ->
-                            if (target is ActionTarget.Single && target.filterable) {
-                                target.target == hoveredMonster
-                            } else {
-                                true
+            val cardActions = hoveredCard?.let { hoveringCard ->
+                if (!hoveringCard.isCardPlayable()) {
+                    return@let emptyList()
+                }
+                hoveringCard.getIntentActions(monster, index, aliveMonsterCount).run {
+                    if (hoveredMonster != null) {
+                        this.filter { action ->
+                            action.target.let { target ->
+                                if (target is ActionTarget.Single && target.filterable) {
+                                    target.target == hoveredMonster
+                                } else {
+                                    true
+                                }
                             }
                         }
+                    } else {
+                        this
                     }
-                } else {
-                    this
                 }
             }
             val (worstCardOutcome, bestCardOutcome) = cardActions?.calculateOutcome(creatureInfo) ?: (null to null)
