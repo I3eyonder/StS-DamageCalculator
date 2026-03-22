@@ -255,6 +255,12 @@ object MonsterRenderer {
                     ?.let {
                         addToBottom(Action.DamageThorns(it))
                     }
+
+                power.ID == ThornsPower.POWER_ID -> {
+                    repeat(this@getEndTurnIntentActions.getAttackIntentActions().size) {
+                        addToBottom(Action.DamageThorns(power.amount))
+                    }
+                }
             }
         }
 
@@ -268,7 +274,6 @@ object MonsterRenderer {
             val poisonPower = getPower(PoisonPower.POWER_ID)
             addToBottom(Action.LoseHP(poisonPower.amount, this@getEndTurnIntentActions))
         }
-
     }
 
     private fun AbstractCard.getIntentActions(
