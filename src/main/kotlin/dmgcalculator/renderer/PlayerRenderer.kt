@@ -30,89 +30,17 @@ import dmgcalculator.util.Utils.toSimpleCardInfoList
 
 object PlayerRenderer {
 
-    private var cachedMsg: String? = null
+    private var cachedMsg = ""
     private val msgBuilder = StringBuilder()
 
     fun render(sb: SpriteBatch, hoveredCard: AbstractCard?, isPlayerTurn: Boolean) {
-        msgBuilder.clear()
         val msg = if (isPlayerTurn) {
-            cachedMsg = null
-            val creatureInfo = CreatureInfo(AbstractDungeon.player)
-            val (cardActions, remainingHandCards) = getCardIntentActions(hoveredCard)
-            val (worstCardOutcome, bestCardOutcome) = if (cardActions.isNotEmpty()) {
-                cardActions.calculateOutcome(creatureInfo)
-            } else {
-                null to null
-            }
-            val endTurnIntentActions = getEndTurnIntentActions(hoveredCard, cardActions, remainingHandCards)
-            if (worstCardOutcome != null && bestCardOutcome != null) {
-                msgBuilder.buildOutcomeMessage(
-                    worstOutcome = worstCardOutcome,
-                    bestOutcome = bestCardOutcome,
-                    showRemainHP = bestCardOutcome.adjustHP != 0,
-                    showTakenDamage = false,
-                )
-                if (endTurnIntentActions.isNotEmpty() && !bestCardOutcome.isDead) {
-                    msgBuilder.append("\n")
-                        .append("--End Turn--".colored("#FCBA03"))
-                        .append("\n")
-                    val worstEndTurnCalculatedOutcome = endTurnIntentActions.calculateWorstOutcome(
-                        creatureInfo.copy(
-                            remainHP = worstCardOutcome.remainHP,
-                            remainBlock = worstCardOutcome.remainBlock,
-                            remainBuffer = worstCardOutcome.remainBuffer,
-                            hasCurlUpPower = worstCardOutcome.hasCurlUpPower,
-                            invincibleAmount = worstCardOutcome.invincibleAmount,
-                            malleableAmount = worstCardOutcome.malleableAmount,
-                        )
-                    )
-                    val bestEndTurnCalculatedOutcome = endTurnIntentActions.calculateBestOutcome(
-                        creatureInfo.copy(
-                            remainHP = bestCardOutcome.remainHP,
-                            remainBlock = bestCardOutcome.remainBlock,
-                            remainBuffer = bestCardOutcome.remainBuffer,
-                            hasCurlUpPower = bestCardOutcome.hasCurlUpPower,
-                            invincibleAmount = bestCardOutcome.invincibleAmount,
-                            malleableAmount = bestCardOutcome.malleableAmount,
-                        )
-                    )
-                    msgBuilder.buildOutcomeMessage(
-                        worstOutcome = worstEndTurnCalculatedOutcome,
-                        bestOutcome = bestEndTurnCalculatedOutcome,
-                    )
-                }
-            } else if (endTurnIntentActions.isNotEmpty()) {
-                msgBuilder.append("--End Turn--".colored("#FCBA03"))
-                    .append("\n")
-                val (worstEndTurnOutcome, bestEndTurnOutcome) = endTurnIntentActions.calculateOutcome(
-                    creatureInfo
-                )
-                msgBuilder.buildOutcomeMessage(
-                    worstOutcome = worstEndTurnOutcome,
-                    bestOutcome = bestEndTurnOutcome,
-                )
-            }
-            msgBuilder.toString()
-        } else if (cachedMsg.isNullOrEmpty()) {
-            val creatureInfo = CreatureInfo(AbstractDungeon.player)
-            val (cardActions, remainingHandCards) = getCardIntentActions(null)
-            val endTurnIntentActions = getEndTurnIntentActions(null, cardActions, remainingHandCards)
-            if (endTurnIntentActions.isNotEmpty()) {
-                msgBuilder.append("--End Turn--".colored("#FCBA03"))
-                    .append("\n")
-                val (worstEndTurnOutcome, bestEndTurnOutcome) = endTurnIntentActions.calculateOutcome(
-                    creatureInfo
-                )
-                msgBuilder.buildOutcomeMessage(
-                    worstOutcome = worstEndTurnOutcome,
-                    bestOutcome = bestEndTurnOutcome,
-                )
-            }
-            msgBuilder.toString().also {
+            cachedMsg = ""
+            createRenderMessage(hoveredCard)
+        } else cachedMsg.ifEmpty {
+            createRenderMessage().also {
                 cachedMsg = it
             }
-        } else {
-            cachedMsg.orEmpty()
         }
 
         if (msg.isNotEmpty()) {
@@ -122,6 +50,66 @@ object PlayerRenderer {
                 AbstractDungeon.player.hb.cY + AbstractDungeon.player.hb.height / 2 + 125f,
             )
         }
+    }
+
+    private fun createRenderMessage(hoveredCard: AbstractCard? = null): String {
+        msgBuilder.clear()
+        val creatureInfo = CreatureInfo(AbstractDungeon.player)
+        val (cardActions, remainingHandCards) = getCardIntentActions(hoveredCard)
+        val (worstCardOutcome, bestCardOutcome) = if (cardActions.isNotEmpty()) {
+            cardActions.calculateOutcome(creatureInfo)
+        } else {
+            null to null
+        }
+        val endTurnIntentActions = getEndTurnIntentActions(hoveredCard, cardActions, remainingHandCards)
+        if (worstCardOutcome != null && bestCardOutcome != null) {
+            msgBuilder.buildOutcomeMessage(
+                worstOutcome = worstCardOutcome,
+                bestOutcome = bestCardOutcome,
+                showRemainHP = bestCardOutcome.adjustHP != 0,
+                showTakenDamage = false,
+            )
+            if (endTurnIntentActions.isNotEmpty() && !bestCardOutcome.isDead) {
+                msgBuilder.append("\n")
+                    .append("--End Turn--".colored("#FCBA03"))
+                    .append("\n")
+                val worstEndTurnCalculatedOutcome = endTurnIntentActions.calculateWorstOutcome(
+                    creatureInfo.copy(
+                        remainHP = worstCardOutcome.remainHP,
+                        remainBlock = worstCardOutcome.remainBlock,
+                        remainBuffer = worstCardOutcome.remainBuffer,
+                        hasCurlUpPower = worstCardOutcome.hasCurlUpPower,
+                        invincibleAmount = worstCardOutcome.invincibleAmount,
+                        malleableAmount = worstCardOutcome.malleableAmount,
+                    )
+                )
+                val bestEndTurnCalculatedOutcome = endTurnIntentActions.calculateBestOutcome(
+                    creatureInfo.copy(
+                        remainHP = bestCardOutcome.remainHP,
+                        remainBlock = bestCardOutcome.remainBlock,
+                        remainBuffer = bestCardOutcome.remainBuffer,
+                        hasCurlUpPower = bestCardOutcome.hasCurlUpPower,
+                        invincibleAmount = bestCardOutcome.invincibleAmount,
+                        malleableAmount = bestCardOutcome.malleableAmount,
+                    )
+                )
+                msgBuilder.buildOutcomeMessage(
+                    worstOutcome = worstEndTurnCalculatedOutcome,
+                    bestOutcome = bestEndTurnCalculatedOutcome,
+                )
+            }
+        } else if (endTurnIntentActions.isNotEmpty()) {
+            msgBuilder.append("--End Turn--".colored("#FCBA03"))
+                .append("\n")
+            val (worstEndTurnOutcome, bestEndTurnOutcome) = endTurnIntentActions.calculateOutcome(
+                creatureInfo
+            )
+            msgBuilder.buildOutcomeMessage(
+                worstOutcome = worstEndTurnOutcome,
+                bestOutcome = bestEndTurnOutcome,
+            )
+        }
+        return msgBuilder.toString()
     }
 
     private fun AbstractCard.createIntentActions(): List<Action> = buildList {

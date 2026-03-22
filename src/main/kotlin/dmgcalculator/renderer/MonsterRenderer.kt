@@ -29,13 +29,41 @@ import dmgcalculator.util.Utils.toSimpleCardInfoList
 
 object MonsterRenderer {
 
-    fun render(sb: SpriteBatch, hoveredCard: AbstractCard?) {
-        val player = AbstractDungeon.player
-        val hoveredMonster = player.getHoveredMonster()
-        val aliveMonstersIndexed = AbstractDungeon.getMonsters().aliveMonstersIndexed
-        val aliveMonsterCount = aliveMonstersIndexed.size
-        val msgBuilder = StringBuilder()
+    private val cachedMsg = mutableMapOf<AbstractMonster, String>()
+    private val msgBuilder = StringBuilder()
 
+    fun render(sb: SpriteBatch, hoveredCard: AbstractCard?, isPlayerTurn: Boolean) {
+        val aliveMonstersIndexed = AbstractDungeon.getMonsters().aliveMonstersIndexed
+        val hoveredMonster = AbstractDungeon.player.getHoveredMonster()
+        val aliveMonsterCount = aliveMonstersIndexed.size
+        val renderMessages = if (isPlayerTurn) {
+            cachedMsg.clear()
+            createRenderMessages(aliveMonstersIndexed, aliveMonsterCount, hoveredCard, hoveredMonster)
+        } else cachedMsg.ifEmpty {
+            createRenderMessages(aliveMonstersIndexed, aliveMonsterCount).also {
+                cachedMsg.putAll(it)
+            }
+        }
+        aliveMonstersIndexed.forEach { (_, monster) ->
+            renderMessages[monster]?.let { msg ->
+                if (msg.isNotEmpty()) {
+                    sb.renderFixedSizeMessage(
+                        msg,
+                        monster.hb.cX,
+                        monster.hb.cY + monster.hb.height / 2 + 125f,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun createRenderMessages(
+        aliveMonstersIndexed: List<IndexedValue<AbstractMonster>>,
+        aliveMonsterCount: Int,
+        hoveredCard: AbstractCard? = null,
+        hoveredMonster: AbstractMonster? = null,
+    ): Map<AbstractMonster, String> = buildMap {
+        val player = AbstractDungeon.player
         aliveMonstersIndexed.forEach { (index, monster) ->
             msgBuilder.clear()
             val creatureInfo = CreatureInfo(monster)
@@ -104,14 +132,7 @@ object MonsterRenderer {
                     bestOutcome = bestEndTurnOutcome,
                 )
             }
-            val msg = msgBuilder.toString()
-            if (msg.isNotEmpty()) {
-                sb.renderFixedSizeMessage(
-                    msgBuilder.toString(),
-                    monster.hb.cX,
-                    monster.hb.cY + monster.hb.height / 2 + 125f,
-                )
-            }
+            this[monster] = msgBuilder.toString()
         }
     }
 

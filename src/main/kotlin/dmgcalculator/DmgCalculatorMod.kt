@@ -47,7 +47,7 @@ class DmgCalculatorMod : PostInitializeSubscriber,
                 applyPowers()
             }
             PlayerRenderer.render(it, hoveredCard, isPlayerTurn)
-            MonsterRenderer.render(it, hoveredCard)
+            MonsterRenderer.render(it, hoveredCard, isPlayerTurn)
         }
     }
 
