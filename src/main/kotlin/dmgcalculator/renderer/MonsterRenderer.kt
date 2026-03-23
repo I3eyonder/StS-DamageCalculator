@@ -695,10 +695,14 @@ object MonsterRenderer {
                     }
                     when (cardID) {
                         BouncingFlask.ID -> {
-                            repeat(getDebuffInstanceCount()) {
+                            repeat(magicNumber) {
                                 if (monsterArtifactPowerAmount-- <= 0) {
                                     if (aliveMonsterCount == 1) {
-                                        add(Action.StackPoison(getPoisonAmount(monster), monster))
+                                        var poisonAmount = getPoisonAmount(monster)
+                                        if (player.hasRelic(SneckoSkull.ID)) {
+                                            poisonAmount += 1
+                                        }
+                                        add(Action.StackPoison(poisonAmount, monster))
                                     }
                                     applySadisticPowerIfNeed()
                                 }
@@ -707,7 +711,11 @@ object MonsterRenderer {
 
                         else -> {
                             if (monsterArtifactPowerAmount-- <= 0) {
-                                add(Action.StackPoison(getPoisonAmount(monster), monster))
+                                var poisonAmount = getPoisonAmount(monster)
+                                if (player.hasRelic(SneckoSkull.ID)) {
+                                    poisonAmount += 1
+                                }
+                                add(Action.StackPoison(poisonAmount, monster))
                                 applySadisticPowerIfNeed()
                             }
                         }
