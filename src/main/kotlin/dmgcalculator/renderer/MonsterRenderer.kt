@@ -10,7 +10,7 @@ import com.megacrit.cardcrawl.cards.purple.CrushJoints
 import com.megacrit.cardcrawl.cards.purple.Indignation
 import com.megacrit.cardcrawl.cards.purple.PressurePoints
 import com.megacrit.cardcrawl.cards.purple.SashWhip
-import com.megacrit.cardcrawl.characters.AbstractPlayer
+import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.orbs.*
@@ -23,6 +23,7 @@ import com.megacrit.cardcrawl.relics.*
 import com.megacrit.cardcrawl.stances.WrathStance
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
+import dmgcalculator.util.Utils.addDuplicationCardActionIfNeeded
 import dmgcalculator.util.Utils.addToBottom
 import dmgcalculator.util.Utils.replacesWith
 import dmgcalculator.util.Utils.toSimpleCardInfoList
@@ -30,7 +31,6 @@ import dmgcalculator.util.Utils.toSimpleCardInfoList
 object MonsterRenderer {
 
     private val cachedMsg = mutableMapOf<AbstractMonster, String>()
-    private val msgBuilder = StringBuilder()
 
     fun render(sb: SpriteBatch, hoveredCard: AbstractCard?, isPlayerTurn: Boolean) {
         val aliveMonstersIndexed = AbstractDungeon.getMonsters().aliveMonstersIndexed
@@ -63,92 +63,133 @@ object MonsterRenderer {
         hoveredCard: AbstractCard? = null,
         hoveredMonster: AbstractMonster? = null,
     ): Map<AbstractMonster, String> = buildMap {
-        val player = AbstractDungeon.player
         aliveMonstersIndexed.forEach { (index, monster) ->
-            msgBuilder.clear()
-            val creatureInfo = CreatureInfo(monster)
-            val cardActions = hoveredCard?.let { hoveringCard ->
-                if (!hoveringCard.isCardPlayable()) {
-                    return@let emptyList()
-                }
-                hoveringCard.getIntentActions(monster, index, aliveMonsterCount).run {
-                    if (hoveredMonster != null) {
-                        this.filter { action ->
-                            action.target.let { target ->
-                                if (target is ActionTarget.Single && target.filterable) {
-                                    target.target == hoveredMonster
-                                } else {
-                                    true
-                                }
-                            }
+            val renderMessages = mutableListOf<String>()
+            val initialMonsterInfo = CreatureInfo(monster)
+            val cardIntentActions = getCardIntentActions(
+                hoveredCard = hoveredCard,
+                hoveredMonster = hoveredMonster,
+                monsterInfo = initialMonsterInfo,
+                monsterIndex = index,
+                aliveMonsterCount = aliveMonsterCount,
+            )
+            val worstMonsterInfo = initialMonsterInfo.copy(
+                powersAmount = initialMonsterInfo.powersAmount.toMutableMap(),
+            )
+            val bestMonsterInfo = initialMonsterInfo.copy(
+                powersAmount = initialMonsterInfo.powersAmount.toMutableMap(),
+            )
+            if (cardIntentActions.isNotEmpty()) {
+                // For player, worst result on monster mean they take minimum of damages
+                val worstActionResult = worstMonsterInfo.takeActions(cardIntentActions, false)
+                // For player, best result on monster mean they take maximum of damages
+                val bestActionResult = bestMonsterInfo.takeActions(cardIntentActions, true)
+                if (worstActionResult != ActionResult.EMPTY || bestActionResult != ActionResult.EMPTY) {
+                    renderMessages.add(
+                        buildString {
+                            append("--Card--".colored("#FCBA03"))
+                            appendLine()
+                            append(
+                                buildOutcomeMessage(
+                                    worstOutcomeResult = OutcomeResult(worstMonsterInfo, worstActionResult),
+                                    bestOutcomeResult = OutcomeResult(bestMonsterInfo, bestActionResult),
+                                ),
+                            )
                         }
-                    } else {
-                        this
+                    )
+                }
+            }
+
+            if (!worstMonsterInfo.isDead) {
+                // For player, worst result on monster mean they take minimum of damages
+                val worstEndTurnActionResult =
+                    worstMonsterInfo.getEndTurnIntentActions(aliveMonsterCount, hoveredCard).let {
+                        worstMonsterInfo.takeActions(it, false)
                     }
-                }
-            }
-            val (worstCardOutcome, bestCardOutcome) = cardActions?.calculateOutcome(creatureInfo) ?: (null to null)
-            val endTurnIntentActions =
-                monster.getEndTurnIntentActions(player, aliveMonsterCount, hoveredCard, cardActions)
-            if (worstCardOutcome != null && bestCardOutcome != null) {
-                val showCardRemainHP = bestCardOutcome.isDead || endTurnIntentActions.isEmpty()
-                msgBuilder.buildOutcomeMessage(
-                    worstOutcome = worstCardOutcome,
-                    bestOutcome = bestCardOutcome,
-                    showRemainHP = showCardRemainHP
-                )
-                if (!showCardRemainHP) {
-                    msgBuilder.append("\n")
-                        .append("--End Turn--".colored("#FCBA03"))
-                        .append("\n")
-                    val worstEndTurnCalculatedOutcome = endTurnIntentActions.calculateWorstOutcome(
-                        creatureInfo.copy(
-                            remainHP = worstCardOutcome.remainHP,
-                            remainBlock = worstCardOutcome.remainBlock,
-                            remainBuffer = worstCardOutcome.remainBuffer,
-                            hasCurlUpPower = worstCardOutcome.hasCurlUpPower,
-                            invincibleAmount = worstCardOutcome.invincibleAmount,
-                            malleableAmount = worstCardOutcome.malleableAmount,
-                        )
-                    )
-                    val bestEndTurnCalculatedOutcome = endTurnIntentActions.calculateBestOutcome(
-                        creatureInfo.copy(
-                            remainHP = bestCardOutcome.remainHP,
-                            remainBlock = bestCardOutcome.remainBlock,
-                            remainBuffer = bestCardOutcome.remainBuffer,
-                            hasCurlUpPower = bestCardOutcome.hasCurlUpPower,
-                            invincibleAmount = bestCardOutcome.invincibleAmount,
-                            malleableAmount = bestCardOutcome.malleableAmount,
-                        )
-                    )
-                    msgBuilder.buildOutcomeMessage(
-                        worstOutcome = worstEndTurnCalculatedOutcome,
-                        bestOutcome = bestEndTurnCalculatedOutcome,
+                // For player, best result on monster mean they take maximum of damages
+                val bestEndTurnActionResult =
+                    bestMonsterInfo.getEndTurnIntentActions(aliveMonsterCount, hoveredCard).let {
+                        bestMonsterInfo.takeActions(it, true)
+                    }
+                if (worstEndTurnActionResult != ActionResult.EMPTY || bestEndTurnActionResult != ActionResult.EMPTY) {
+                    renderMessages.add(
+                        buildString {
+                            append("--End Turn--".colored("#FCBA03"))
+                            appendLine()
+                            append(
+                                buildOutcomeMessage(
+                                    worstOutcomeResult = OutcomeResult(worstMonsterInfo, worstEndTurnActionResult),
+                                    bestOutcomeResult = OutcomeResult(bestMonsterInfo, bestEndTurnActionResult),
+                                ),
+                            )
+                        }
                     )
                 }
-            } else if (endTurnIntentActions.isNotEmpty()) {
-                msgBuilder.append("--End Turn--".colored("#FCBA03"))
-                    .append("\n")
-                val (worstEndTurnOutcome, bestEndTurnOutcome) = endTurnIntentActions.calculateOutcome(
-                    creatureInfo
-                )
-                msgBuilder.buildOutcomeMessage(
-                    worstOutcome = worstEndTurnOutcome,
-                    bestOutcome = bestEndTurnOutcome,
-                )
             }
-            this[monster] = msgBuilder.toString()
+
+            if (!worstMonsterInfo.isDead) {
+                // For player, worst result on monster mean they take minimum of damages
+                val worstThornActionResult = worstMonsterInfo.pendingActions.let {
+                    worstMonsterInfo.takeActions(it, false)
+                }
+                // For player, best result on monster mean they take maximum of damages
+                val bestThornActionResult = bestMonsterInfo.pendingActions.let {
+                    bestMonsterInfo.takeActions(it, true)
+                }
+                if (worstThornActionResult != ActionResult.EMPTY || bestThornActionResult != ActionResult.EMPTY) {
+                    renderMessages.add(
+                        buildString {
+                            append("--Thorn--".colored("#FCBA03"))
+                            appendLine()
+                            append(
+                                buildOutcomeMessage(
+                                    worstOutcomeResult = OutcomeResult(worstMonsterInfo, worstThornActionResult),
+                                    bestOutcomeResult = OutcomeResult(bestMonsterInfo, bestThornActionResult),
+                                ),
+                            )
+                        }
+                    )
+                }
+            }
+            this[monster] = renderMessages.joinToString("\n")
         }
     }
 
-    private fun AbstractMonster.getEndTurnIntentActions(
-        player: AbstractPlayer,
+    private fun getCardIntentActions(
+        hoveredCard: AbstractCard?,
+        hoveredMonster: AbstractMonster?,
+        monsterInfo: CreatureInfo<AbstractMonster>,
+        monsterIndex: Int,
+        aliveMonsterCount: Int,
+    ): List<Action> {
+        return hoveredCard?.let { hoveringCard ->
+            if (!hoveringCard.isCardPlayable()) {
+                return@let emptyList()
+            }
+            hoveringCard.getIntentActions(monsterInfo, monsterIndex, aliveMonsterCount).run {
+                if (hoveredMonster != null) {
+                    this.filter { action ->
+                        action.target.let { target ->
+                            if (target is ActionTarget.Single && target.filterable) {
+                                target.target == hoveredMonster
+                            } else {
+                                true
+                            }
+                        }
+                    }
+                } else {
+                    this
+                }
+            }
+        }.orEmpty()
+    }
+
+    private fun CreatureInfo<AbstractMonster>.getEndTurnIntentActions(
         aliveMonsterCount: Int,
         hoveredCard: AbstractCard?,
-        cardActions: List<Action>?,
     ): List<Action> = buildList {
         // player relics damage
-        player.relics.forEach { relic ->
+        AbstractDungeon.player.relics.forEach { relic ->
             when (relic.relicId) {
                 StoneCalendar.ID -> {
                     if (relic.counter == 7) {
@@ -157,9 +198,9 @@ object MonsterRenderer {
                 }
 
                 Orichalcum.ID -> {
-                    if (player.currentBlock == 0 || (relic as Orichalcum).trigger)
-                        if (player.hasPower(JuggernautPower.POWER_ID)) {
-                            val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
+                    if (AbstractDungeon.player.currentBlock == 0 || (relic as Orichalcum).trigger)
+                        if (AbstractDungeon.player.hasPower(JuggernautPower.POWER_ID)) {
+                            val juggernautPower = AbstractDungeon.player.getPower(JuggernautPower.POWER_ID)
                             if (aliveMonsterCount > 1) {
                                 addToBottom(
                                     Action.DamageThorns(
@@ -180,9 +221,9 @@ object MonsterRenderer {
                 }
 
                 CloakClasp.ID -> {
-                    if (player.hand.group.isNotEmpty())
-                        if (player.hasPower(JuggernautPower.POWER_ID)) {
-                            val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
+                    if (AbstractDungeon.player.hand.group.isNotEmpty())
+                        if (AbstractDungeon.player.hasPower(JuggernautPower.POWER_ID)) {
+                            val juggernautPower = AbstractDungeon.player.getPower(JuggernautPower.POWER_ID)
                             if (aliveMonsterCount > 1) {
                                 addToBottom(
                                     Action.DamageThorns(
@@ -205,21 +246,21 @@ object MonsterRenderer {
         }
 
         // player orbs damage
-        val playerOrbs = player.orbs.plus(hoveredCard?.getChannelingOrbs().orEmpty()).filterNot {
+        val playerOrbs = AbstractDungeon.player.orbs.plus(hoveredCard?.getChannelingOrbs().orEmpty()).filterNot {
             it is EmptyOrbSlot
-        }.takeLast(player.maxOrbs).let {
+        }.takeLast(AbstractDungeon.player.maxOrbs).let {
             if (hoveredCard?.isOrbEvokeCard == true) {
                 it.drop(1)
             } else {
                 it
             }
         }
-        val orbDamageMultiplier = if (hasPower(LockOnPower.POWER_ID)) 1.5f else 1f
+        val orbDamageMultiplier = if (creature.hasPower(LockOnPower.POWER_ID)) 1.5f else 1f
         playerOrbs.forEach { orb ->
             when (orb.ID) {
                 Lightning.ORB_ID -> {
                     val damageAmount = orb.passiveAmount.times(orbDamageMultiplier).toInt()
-                    if (player.hasPower(ElectroPower.POWER_ID)) {
+                    if (AbstractDungeon.player.hasPower(ElectroPower.POWER_ID)) {
                         addToBottom(Action.DamageThorns(damageAmount))
                     } else {
                         addToBottom(Action.DamageThorns(0, damageAmount, ActionTarget.Random))
@@ -227,8 +268,8 @@ object MonsterRenderer {
                 }
 
                 Frost.ORB_ID -> {
-                    if (player.hasPower(JuggernautPower.POWER_ID)) {
-                        val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
+                    if (AbstractDungeon.player.hasPower(JuggernautPower.POWER_ID)) {
+                        val juggernautPower = AbstractDungeon.player.getPower(JuggernautPower.POWER_ID)
                         if (aliveMonsterCount > 1) {
                             add(
                                 Action.DamageThorns(
@@ -251,7 +292,7 @@ object MonsterRenderer {
         }
 
         // player powers damage
-        player.powers.forEach { power ->
+        AbstractDungeon.player.powers.forEach { power ->
             when {
                 power.ID == CombustPower.POWER_ID ||
                         power.ID == OmegaPower.POWER_ID -> addToBottom(Action.DamageThorns(power.amount))
@@ -262,96 +303,69 @@ object MonsterRenderer {
                     }
 
                 power.ID == ThornsPower.POWER_ID -> {
-                    repeat(this@getEndTurnIntentActions.getAttackIntentActions().size) {
-                        addToBottom(Action.DamageThorns(power.amount))
+                    repeat(this@getEndTurnIntentActions.creature.getAttackIntentActions().size) {
+                        addToBottom(Action.DamageThorns(power.amount).withPendingTag())
                     }
                 }
             }
         }
 
         // monster poison damage
-        cardActions?.forEach {
-            if (it is Action.StackPoison) {
-                addToBottom(Action.LoseHP(it.value, it.target))
-            }
+        creature.getPower(PoisonPower.POWER_ID)?.let { poisonPower ->
+            addToBottom(Action.LoseHP(poisonPower.amount, creature))
         }
-        if (hasPower(PoisonPower.POWER_ID)) {
-            val poisonPower = getPower(PoisonPower.POWER_ID)
-            addToBottom(Action.LoseHP(poisonPower.amount, this@getEndTurnIntentActions))
+
+        // pending actions
+        addAll(pendingActions).also {
+            pendingActions.clear()
         }
     }
 
     private fun AbstractCard.getIntentActions(
-        monster: AbstractMonster,
+        monsterInfo: CreatureInfo<AbstractMonster>,
         monsterIndex: Int,
         aliveMonsterCount: Int,
     ): List<Action> {
-        val player = AbstractDungeon.player
-        val baseAction = createIntentAction(monster, monsterIndex, aliveMonsterCount)
-        val actions = mutableListOf(baseAction)
+        val baseAction = createIntentActions(monsterInfo, monsterIndex, aliveMonsterCount).asGroupedAction()
+        val actions = mutableListOf<Action>(baseAction)
 
-        // Apply powers that modify action here if needed
-        fun createDuplicationAttackAction(): Action {
-            val monsterTemporaryPowers = buildList {
-                if (canGiveVulnerable && !monster.hasPower(VulnerablePower.POWER_ID)) {
-                    add(VulnerablePower(monster, 1, false))
+        // Apply powers that modify attack here if needed
+        if (canGiveVulnerable && !monsterInfo.hasPower(VulnerablePower.POWER_ID)) {
+            monsterInfo.creature.applyTemporaryPowers(VulnerablePower(monsterInfo.creature, 1, false)) {
+                if (AbstractDungeon.player.hasPower(VigorPower.POWER_ID)) {
+                    AbstractDungeon.player.temporaryRemoveAmountFromPowers(VigorPower.POWER_ID) {
+                        actions.addDuplicationCardActionIfNeeded(this@getIntentActions) {
+                            createIntentActions(
+                                monsterInfo,
+                                monsterIndex,
+                                aliveMonsterCount
+                            ).asGroupedAction()
+                        }
+                    }
+                } else {
+                    actions.addDuplicationCardActionIfNeeded(this@getIntentActions) {
+                        createIntentActions(monsterInfo, monsterIndex, aliveMonsterCount).asGroupedAction()
+                    }
                 }
             }
-            val playerTemporaryRemoveAmountPowers = buildList {
-                if (player.hasPower(VigorPower.POWER_ID)) {
-                    add(VigorPower.POWER_ID)
-                }
-            }
-            return if (monsterTemporaryPowers.isNotEmpty() || playerTemporaryRemoveAmountPowers.isNotEmpty()) {
-                monster.applyTemporaryPowers(monsterTemporaryPowers) {
-                    player.temporaryRemoveAmountFromPowers(playerTemporaryRemoveAmountPowers) {
-                        createIntentAction(monster, monsterIndex, aliveMonsterCount)
+        } else {
+            if (AbstractDungeon.player.hasPower(VigorPower.POWER_ID)) {
+                AbstractDungeon.player.temporaryRemoveAmountFromPowers(VigorPower.POWER_ID) {
+                    actions.addDuplicationCardActionIfNeeded(this@getIntentActions) {
+                        createIntentActions(monsterInfo, monsterIndex, aliveMonsterCount).asGroupedAction()
                     }
                 }
             } else {
-                baseAction
-            }
-        }
-
-        player.powers.forEach { power ->
-            when (power.ID) {
-                DoubleTapPower.POWER_ID, DuplicationPower.POWER_ID -> {
-                    if (type == CardType.ATTACK) {
-                        actions.addToBottom(createDuplicationAttackAction())
-                    } else if (power.ID == DuplicationPower.POWER_ID) {
-                        actions.addToBottom(baseAction)
-                    }
+                actions.addDuplicationCardActionIfNeeded(this) {
+                    createIntentActions(monsterInfo, monsterIndex, aliveMonsterCount).asGroupedAction()
                 }
-
-                EchoPower.POWER_ID -> {
-                    val cardsDoubledThisTurn = power.getPrivateField<Int>("cardsDoubledThisTurn") ?: 0
-                    if (power.amount > 0 &&
-                        AbstractDungeon.actionManager.cardsPlayedThisTurn.size + 1 - cardsDoubledThisTurn <= power.amount
-                    ) {
-                        if (type == CardType.ATTACK) {
-                            actions.addToBottom(createDuplicationAttackAction())
-                        } else {
-                            actions.addToBottom(baseAction)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Apply Necronomicon relic if needed
-        player.getRelic(Necronomicon.ID)?.let { necronomiconRelic ->
-            if (type == CardType.ATTACK &&
-                (costForTurn >= 2 && !freeToPlayOnce || cost == -1 && energyOnUse >= 2) &&
-                necronomiconRelic.checkTrigger()
-            ) {
-                actions.addToBottom(createDuplicationAttackAction())
             }
         }
 
         // Apply Charon's Ashes relic if needed
-        player.getRelic(CharonsAshes.ID)?.let { charonsAshesRelic ->
+        AbstractDungeon.player.getRelic(CharonsAshes.ID)?.let { charonsAshesRelic ->
             actions.replacesWith { originActions ->
-                var hand = player.hand.group.toSimpleCardInfoList()
+                var hand = AbstractDungeon.player.hand.group.toSimpleCardInfoList()
                 originActions.mapIndexed { index, action ->
                     val exhaustInfo = getExhaustInfo(hand)
                     listOf(action)
@@ -380,7 +394,7 @@ object MonsterRenderer {
         }
 
         // Apply LetterOpener relic if needed
-        player.getRelic(LetterOpener.ID)?.let { letterOpenerRelic ->
+        AbstractDungeon.player.getRelic(LetterOpener.ID)?.let { letterOpenerRelic ->
             var counter = letterOpenerRelic.counter
             if (type == CardType.SKILL) {
                 actions.replacesWith { originActions ->
@@ -400,19 +414,19 @@ object MonsterRenderer {
 
         // Apply monster debuff and player buff if needed
         actions.replacesWith { originActions ->
-            var hand = player.hand.group.toSimpleCardInfoList()
+            var hand = AbstractDungeon.player.hand.group.toSimpleCardInfoList()
             originActions.mapIndexed { index, action ->
-                val monsterExtraActions = monster.powers.mapNotNull { power ->
+                val monsterExtraActions = monsterInfo.creature.powers.mapNotNull { power ->
                     when (power.ID) {
-                        ChokePower.POWER_ID -> Action.LoseHP(power.amount, monster)
+                        ChokePower.POWER_ID -> Action.LoseHP(power.amount, monsterInfo.creature)
                         else -> null
                     }
                 }
-                val playerExtraActions = player.powers.mapNotNull { power ->
+                val playerExtraActions = AbstractDungeon.player.powers.mapNotNull { power ->
                     when (power.ID) {
                         ThousandCutsPower.POWER_ID -> Action.DamageThorns(power.amount)
                         JuggernautPower.POWER_ID -> {
-                            if (player.hasPower(FeelNoPainPower.POWER_ID)) {
+                            if (AbstractDungeon.player.hasPower(FeelNoPainPower.POWER_ID)) {
                                 val exhaustInfo = getExhaustInfo(hand)
                                 emptyList<Action>()
                                     .plus(
@@ -426,7 +440,7 @@ object MonsterRenderer {
                                             } else {
                                                 Action.DamageThorns(
                                                     power.amount,
-                                                    ActionTarget.Single(monster)
+                                                    ActionTarget.Single(monsterInfo.creature)
                                                 )
                                             }
                                         } else {
@@ -444,7 +458,7 @@ object MonsterRenderer {
                                             } else {
                                                 Action.DamageThorns(
                                                     power.amount,
-                                                    ActionTarget.Single(monster)
+                                                    ActionTarget.Single(monsterInfo.creature)
                                                 )
                                             }
                                         }
@@ -478,7 +492,7 @@ object MonsterRenderer {
         }
 
         // Apply Panache if needed
-        player.getPower(PanachePower.POWER_ID)?.let { panachePower ->
+        AbstractDungeon.player.getPower(PanachePower.POWER_ID)?.let { panachePower ->
             try {
                 // panache.amount is counted down from 5 (remaining actions until next extra)
                 var remaining = panachePower.amount
@@ -502,60 +516,71 @@ object MonsterRenderer {
         return actions.flatten()
     }
 
-    private fun AbstractCard.createIntentAction(
+    private fun MutableList<Action>.addOrbEvokeAction(
+        orbsToEvoke: AbstractOrb,
+        orbDamageMultiplier: Float,
         monster: AbstractMonster,
-        monsterIndex: Int,
         aliveMonsterCount: Int,
-    ): Action {
-        val player = AbstractDungeon.player
-        calculateCardDamage(monster)
-        val cardHitCount = getActionHitCount()
-        val damagePerHit = getDamagePerHit(monsterIndex)
-        val orbDamageMultiplier = if (monster.hasPower(LockOnPower.POWER_ID)) 1.5f else 1f
-        fun MutableList<Action>.addOrbEvokeAction(orbsToEvoke: AbstractOrb) {
-            when (orbsToEvoke.ID) {
-                Lightning.ORB_ID -> {
-                    val damageAmount = orbsToEvoke.evokeAmount.times(orbDamageMultiplier).toInt()
-                    if (player.hasPower(ElectroPower.POWER_ID)) {
-                        add(Action.DamageThorns(damageAmount))
-                    } else {
-                        add(Action.DamageThorns(0, damageAmount, ActionTarget.Random))
-                    }
-                }
-
-                Frost.ORB_ID -> {
-                    if (player.hasPower(JuggernautPower.POWER_ID)) {
-                        val juggernautPower = player.getPower(JuggernautPower.POWER_ID)
-                        if (aliveMonsterCount > 1) {
-                            add(
-                                Action.DamageThorns(
-                                    0,
-                                    juggernautPower.amount,
-                                    ActionTarget.Random
-                                )
-                            )
-                        } else {
-                            add(
-                                Action.DamageThorns(
-                                    juggernautPower.amount,
-                                    ActionTarget.Single(monster)
-                                )
-                            )
-                        }
-                    }
-                }
-
-                Dark.ORB_ID -> {
-                    val lowestHPMonster = AbstractDungeon.getMonsters().aliveMonsters.minBy {
-                        it.currentHealth
-                    }
-                    val damageAmount = orbsToEvoke.evokeAmount.times(orbDamageMultiplier).toInt()
-                    add(Action.DamageThorns(damageAmount, ActionTarget.Single(lowestHPMonster)))
+    ) {
+        when (orbsToEvoke.ID) {
+            Lightning.ORB_ID -> {
+                val damageAmount = orbsToEvoke.evokeAmount.times(orbDamageMultiplier).toInt()
+                if (AbstractDungeon.player.hasPower(ElectroPower.POWER_ID)) {
+                    add(Action.DamageThorns(damageAmount))
+                } else {
+                    add(Action.DamageThorns(0, damageAmount, ActionTarget.Random))
                 }
             }
-        }
 
-        var monsterArtifactPowerAmount = monster.getPower(ArtifactPower.POWER_ID)?.amount ?: 0
+            Frost.ORB_ID -> {
+                if (AbstractDungeon.player.hasPower(JuggernautPower.POWER_ID)) {
+                    val juggernautPower = AbstractDungeon.player.getPower(JuggernautPower.POWER_ID)
+                    if (aliveMonsterCount > 1) {
+                        add(
+                            Action.DamageThorns(
+                                0,
+                                juggernautPower.amount,
+                                ActionTarget.Random
+                            )
+                        )
+                    } else {
+                        add(
+                            Action.DamageThorns(
+                                juggernautPower.amount,
+                                ActionTarget.Single(monster)
+                            )
+                        )
+                    }
+                }
+            }
+
+            Dark.ORB_ID -> {
+                val lowestHPMonster = AbstractDungeon.getMonsters().aliveMonsters.minBy {
+                    it.currentHealth
+                }
+                val damageAmount = orbsToEvoke.evokeAmount.times(orbDamageMultiplier).toInt()
+                add(Action.DamageThorns(damageAmount, ActionTarget.Single(lowestHPMonster)))
+            }
+        }
+    }
+
+    private fun CreatureInfo<out AbstractCreature>.ifNoArtifactPower(block: () -> Unit) {
+        if (getPowerAmount(ArtifactPower.POWER_ID) <= 0) {
+            block()
+        } else {
+            reducePowerAmount(ArtifactPower.POWER_ID, 1)
+        }
+    }
+
+    private fun AbstractCard.createIntentActions(
+        monsterInfo: CreatureInfo<AbstractMonster>,
+        monsterIndex: Int,
+        aliveMonsterCount: Int,
+    ): List<Action> {
+        val monster = monsterInfo.creature
+        val cardHitCount = getActionHitCount()
+        val damagePerHit = getDamagePerHit(monsterIndex)
+        val orbDamageMultiplier = if (monsterInfo.hasPower(LockOnPower.POWER_ID)) 1.5f else 1f
 
         return List(cardHitCount) {
             buildList {
@@ -563,8 +588,18 @@ object MonsterRenderer {
                     if (isRandomAttackCard && aliveMonsterCount > 1) {
                         add(Action.DamageNormal(0, damagePerHit, ActionTarget.Random))
                     } else {
-                        add(Action.DamageNormal(damagePerHit, monster))
-                        if (cardID == Bane.ID && monster.hasPower(PoisonPower.POWER_ID)) {
+                        if (cardID == Bane.ID) {
+                            if (monsterInfo.hasPower(PoisonPower.POWER_ID)) {
+                                add(Action.DamageNormal(damagePerHit, monster))
+                                add(Action.DamageNormal(damagePerHit, monster))
+                            } else {
+                                add(
+                                    Action.DamageNormal(damagePerHit, monster).apply {
+                                        addTags(Bane.ID)
+                                    }
+                                )
+                            }
+                        } else {
                             add(Action.DamageNormal(damagePerHit, monster))
                         }
                     }
@@ -572,15 +607,15 @@ object MonsterRenderer {
 
                 // Apply MarkPower if needed
                 if (cardID == PressurePoints.ID) {
-                    monster.getPower(MarkPower.POWER_ID)?.let { markPower ->
-                        add(Action.LoseHP(markPower.amount, monster))
+                    monsterInfo.powersAmount[MarkPower.POWER_ID]?.let { markAmount ->
+                        add(Action.LoseHP(markAmount, monster))
                     }
                     add(Action.LoseHP(magicNumber, ActionTarget.Single(monster)))
                 }
 
                 // Apply player's Juggernaut power if needed
-                player.getPower(JuggernautPower.POWER_ID)?.let { juggernautPower ->
-                    if (type == CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
+                AbstractDungeon.player.getPower(JuggernautPower.POWER_ID)?.let { juggernautPower ->
+                    if (type == CardType.ATTACK && AbstractDungeon.player.hasPower(RagePower.POWER_ID)) {
                         if (aliveMonsterCount > 1) {
                             add(
                                 Action.DamageThorns(
@@ -598,7 +633,7 @@ object MonsterRenderer {
                             )
                         }
                     }
-                    if (player.hasPower(AfterImagePower.POWER_ID)) {
+                    if (AbstractDungeon.player.hasPower(AfterImagePower.POWER_ID)) {
                         if (aliveMonsterCount > 1) {
                             add(
                                 Action.DamageThorns(
@@ -637,32 +672,32 @@ object MonsterRenderer {
                 }
 
                 // Apply player's Sadistic power if needed
-                player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
+                AbstractDungeon.player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
                     if (isDebuffCard) {
                         val shouldTrigger = when (cardID) {
                             GoForTheEyes.ID -> monster.intentBaseDmg >= 0
                             CrushJoints.ID -> AbstractDungeon.actionManager.cardsPlayedThisCombat.lastOrNull()?.type == CardType.SKILL
                             SashWhip.ID -> AbstractDungeon.actionManager.cardsPlayedThisCombat.lastOrNull()?.type == CardType.ATTACK
-                            Indignation.ID -> player.stance.ID == WrathStance.STANCE_ID
+                            Indignation.ID -> AbstractDungeon.player.stance.ID == WrathStance.STANCE_ID
 
                             else -> !canGivePoison
                         }
                         if (shouldTrigger) {
                             repeat(getDebuffInstanceCount()) {
-                                if (monsterArtifactPowerAmount-- <= 0) {
+                                monsterInfo.ifNoArtifactPower {
                                     add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
                                 }
                             }
                         }
                     }
-                    if (player.hasPower(WaveOfTheHandPower.POWER_ID)) {
-                        if (type == CardType.ATTACK && player.hasPower(RagePower.POWER_ID)) {
-                            if (monsterArtifactPowerAmount-- <= 0) {
+                    if (AbstractDungeon.player.hasPower(WaveOfTheHandPower.POWER_ID)) {
+                        if (type == CardType.ATTACK && AbstractDungeon.player.hasPower(RagePower.POWER_ID)) {
+                            monsterInfo.ifNoArtifactPower {
                                 add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
                             }
                         }
                         if (block > 0 && baseBlock >= 0) {
-                            if (monsterArtifactPowerAmount-- <= 0) {
+                            monsterInfo.ifNoArtifactPower {
                                 add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
                             }
                         }
@@ -670,58 +705,57 @@ object MonsterRenderer {
                 }
 
                 // Evoke orbs if needed
-                player.orbs.plus(getChannelingOrbs()).filterNot {
+                AbstractDungeon.player.orbs.plus(getChannelingOrbs()).filterNot {
                     it is EmptyOrbSlot
-                }.dropLast(player.maxOrbs)
+                }.dropLast(AbstractDungeon.player.maxOrbs)
                     .forEach { evokedOrb ->
-                        addOrbEvokeAction(evokedOrb)
+                        addOrbEvokeAction(evokedOrb, orbDamageMultiplier, monster, aliveMonsterCount)
                     }
                 if (isOrbEvokeCard) {
-                    player.orbs.firstOrNull()?.let { orbsToEvoke ->
-                        addOrbEvokeAction(orbsToEvoke)
+                    AbstractDungeon.player.orbs.firstOrNull()?.let { orbsToEvoke ->
+                        addOrbEvokeAction(orbsToEvoke, orbDamageMultiplier, monster, aliveMonsterCount)
                     }
                 }
 
                 // Apply poison if needed
                 if (canGivePoison) {
-                    fun applySadisticPowerIfNeed() {
-                        player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
-                            if (aliveMonsterCount > 1) {
-                                add(Action.DamageThorns(0, sadisticPower.amount, ActionTarget.Random))
-                            } else {
-                                add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
-                            }
-                        }
-                    }
                     when (cardID) {
                         BouncingFlask.ID -> {
                             repeat(magicNumber) {
-                                if (monsterArtifactPowerAmount-- <= 0) {
+                                monsterInfo.ifNoArtifactPower {
                                     if (aliveMonsterCount == 1) {
                                         var poisonAmount = getPoisonAmount(monster)
-                                        if (player.hasRelic(SneckoSkull.ID)) {
+                                        if (AbstractDungeon.player.hasRelic(SneckoSkull.ID)) {
                                             poisonAmount += 1
                                         }
-                                        add(Action.StackPoison(poisonAmount, monster))
+                                        add(Action.LoseHP(poisonAmount, monster, true).withPendingTag())
                                     }
-                                    applySadisticPowerIfNeed()
+                                    AbstractDungeon.player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
+                                        if (aliveMonsterCount > 1) {
+                                            add(Action.DamageThorns(0, sadisticPower.amount, ActionTarget.Random))
+                                        } else {
+                                            add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
+                                        }
+                                    }
                                 }
                             }
                         }
 
                         else -> {
-                            if (monsterArtifactPowerAmount-- <= 0) {
+                            monsterInfo.ifNoArtifactPower {
                                 var poisonAmount = getPoisonAmount(monster)
-                                if (player.hasRelic(SneckoSkull.ID)) {
+                                if (AbstractDungeon.player.hasRelic(SneckoSkull.ID)) {
                                     poisonAmount += 1
                                 }
-                                add(Action.StackPoison(poisonAmount, monster))
-                                applySadisticPowerIfNeed()
+                                add(Action.LoseHP(poisonAmount, monster, true).withPendingTag())
+                                AbstractDungeon.player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
+                                    add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
+                                }
                             }
                         }
                     }
                 }
             }.asGroupedAction()
-        }.asGroupedAction()
+        }
     }
 }

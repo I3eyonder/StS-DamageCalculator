@@ -4,6 +4,18 @@ import com.megacrit.cardcrawl.core.AbstractCreature
 
 sealed class Action(open val min: Int, open val max: Int, open val target: ActionTarget) {
 
+    private val tags = mutableSetOf<String>()
+
+    fun hasTag(tag: String) = tags.contains(tag)
+
+    fun addTags(vararg tags: String) {
+        this.tags.addAll(tags)
+    }
+
+    fun removeTags(vararg tags: String) {
+        this.tags.removeAll(tags.toSet())
+    }
+
     data class GroupedAction(val actions: List<Action>) : Action(0, 0, ActionTarget.None)
 
     data class DamageNormal(
@@ -28,14 +40,10 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
         val value: Int,
         override val target: ActionTarget,
     ) : Action(value, value, target) {
-        constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, false))
-    }
-
-    data class StackPoison(
-        val value: Int,
-        override val target: ActionTarget,
-    ) : Action(value, value, target) {
-        constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, true))
+        constructor(value: Int, target: AbstractCreature, filterable: Boolean = false) : this(
+            value,
+            ActionTarget.Single(target, filterable)
+        )
     }
 
     data class GainHP(
@@ -54,6 +62,10 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
 
     data object RefineStats : Action(0, 0, ActionTarget.None)
     data object NoAction : Action(0, 0, ActionTarget.None)
+
+    companion object {
+        const val TAG_PENDING = "Action.Pending"
+    }
 }
 
 sealed interface ActionTarget {
@@ -62,6 +74,18 @@ sealed interface ActionTarget {
     data object All : ActionTarget
     data object None : ActionTarget
 }
+
+fun Action.withTags(vararg tags: String): Action = apply {
+    addTags(*tags)
+}
+
+fun Action.withPendingTag(): Action = withTags(Action.TAG_PENDING)
+
+fun Action.withoutPendingTag(): Action = apply {
+    removeTags(Action.TAG_PENDING)
+}
+
+fun Action.hasPendingTag(): Boolean = hasTag(Action.TAG_PENDING)
 
 fun List<Action>.asGroupedAction(): Action.GroupedAction {
     return Action.GroupedAction(this)
@@ -74,39 +98,4 @@ fun List<Action>.flatten(): List<Action> = buildList {
             else -> add(action)
         }
     }
-}
-
-fun List<Action>.calculateWorstOutcome(creatureInfo: CreatureInfo): Outcome {
-    return Outcome(
-        remainHP = creatureInfo.remainHP,
-        remainBlock = creatureInfo.remainBlock,
-        remainBuffer = creatureInfo.remainBuffer,
-        hasCurlUpPower = creatureInfo.hasCurlUpPower,
-        invincibleAmount = creatureInfo.invincibleAmount,
-        malleableAmount = creatureInfo.malleableAmount,
-    ).also {
-        forEach { action ->
-            it.apply(action, false, creatureInfo)
-        }
-    }
-}
-
-fun List<Action>.calculateBestOutcome(creatureInfo: CreatureInfo): Outcome {
-    return Outcome(
-        remainHP = creatureInfo.remainHP,
-        remainBlock = creatureInfo.remainBlock,
-        remainBuffer = creatureInfo.remainBuffer,
-        hasCurlUpPower = creatureInfo.hasCurlUpPower,
-        invincibleAmount = creatureInfo.invincibleAmount,
-        malleableAmount = creatureInfo.malleableAmount,
-    ).also {
-        forEach { action ->
-            it.apply(action, true, creatureInfo)
-        }
-    }
-}
-
-fun List<Action>.calculateOutcome(creatureInfo: CreatureInfo): Pair<Outcome, Outcome> {
-    val actions = filterNot { action -> action is Action.NoAction }
-    return actions.calculateWorstOutcome(creatureInfo) to actions.calculateBestOutcome(creatureInfo)
 }

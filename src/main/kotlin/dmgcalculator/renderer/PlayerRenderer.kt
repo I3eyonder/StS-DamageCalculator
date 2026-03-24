@@ -10,9 +10,11 @@ import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Pain
 import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.red.Bloodletting
+import com.megacrit.cardcrawl.cards.red.Entrench
 import com.megacrit.cardcrawl.cards.red.Hemokinesis
 import com.megacrit.cardcrawl.cards.red.Offering
 import com.megacrit.cardcrawl.cards.status.Burn
+import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.orbs.EmptyOrbSlot
 import com.megacrit.cardcrawl.orbs.Frost
@@ -23,6 +25,7 @@ import com.megacrit.cardcrawl.relics.*
 import com.megacrit.cardcrawl.stances.CalmStance
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
+import dmgcalculator.util.Utils.addDuplicationCardActionIfNeeded
 import dmgcalculator.util.Utils.addToBottom
 import dmgcalculator.util.Utils.addToTop
 import dmgcalculator.util.Utils.replacesWith
@@ -31,7 +34,6 @@ import dmgcalculator.util.Utils.toSimpleCardInfoList
 object PlayerRenderer {
 
     private var cachedMsg = ""
-    private val msgBuilder = StringBuilder()
 
     fun render(sb: SpriteBatch, hoveredCard: AbstractCard?, isPlayerTurn: Boolean) {
         val msg = if (isPlayerTurn) {
@@ -53,171 +55,162 @@ object PlayerRenderer {
     }
 
     private fun createRenderMessage(hoveredCard: AbstractCard? = null): String {
-        msgBuilder.clear()
-        val creatureInfo = CreatureInfo(AbstractDungeon.player)
+        val renderMessages = mutableListOf<String>()
+        val initialCreatureInfo = CreatureInfo(AbstractDungeon.player)
         val (cardActions, remainingHandCards) = getCardIntentActions(hoveredCard)
-        val (worstCardOutcome, bestCardOutcome) = if (cardActions.isNotEmpty()) {
-            cardActions.calculateOutcome(creatureInfo)
-        } else {
-            null to null
-        }
-        val endTurnIntentActions = getEndTurnIntentActions(hoveredCard, cardActions, remainingHandCards)
-        if (worstCardOutcome != null && bestCardOutcome != null) {
-            msgBuilder.buildOutcomeMessage(
-                worstOutcome = worstCardOutcome,
-                bestOutcome = bestCardOutcome,
-                showRemainHP = bestCardOutcome.adjustHP != 0,
-                showTakenDamage = false,
-            )
-            if (endTurnIntentActions.isNotEmpty() && !bestCardOutcome.isDead) {
-                msgBuilder.append("\n")
-                    .append("--End Turn--".colored("#FCBA03"))
-                    .append("\n")
-                val worstEndTurnCalculatedOutcome = endTurnIntentActions.calculateWorstOutcome(
-                    creatureInfo.copy(
-                        remainHP = worstCardOutcome.remainHP,
-                        remainBlock = worstCardOutcome.remainBlock,
-                        remainBuffer = worstCardOutcome.remainBuffer,
-                        hasCurlUpPower = worstCardOutcome.hasCurlUpPower,
-                        invincibleAmount = worstCardOutcome.invincibleAmount,
-                        malleableAmount = worstCardOutcome.malleableAmount,
-                    )
-                )
-                val bestEndTurnCalculatedOutcome = endTurnIntentActions.calculateBestOutcome(
-                    creatureInfo.copy(
-                        remainHP = bestCardOutcome.remainHP,
-                        remainBlock = bestCardOutcome.remainBlock,
-                        remainBuffer = bestCardOutcome.remainBuffer,
-                        hasCurlUpPower = bestCardOutcome.hasCurlUpPower,
-                        invincibleAmount = bestCardOutcome.invincibleAmount,
-                        malleableAmount = bestCardOutcome.malleableAmount,
-                    )
-                )
-                msgBuilder.buildOutcomeMessage(
-                    worstOutcome = worstEndTurnCalculatedOutcome,
-                    bestOutcome = bestEndTurnCalculatedOutcome,
+        val worstCreatureInfo = initialCreatureInfo.copy(
+            powersAmount = initialCreatureInfo.powersAmount.toMutableMap(),
+        )
+        val bestCreatureInfo = initialCreatureInfo.copy(
+            powersAmount = initialCreatureInfo.powersAmount.toMutableMap(),
+        )
+
+        // Card actions
+        if (cardActions.isNotEmpty()) {
+            // For player, worst result on player mean they take maximum of damages
+            val worstActionResult = worstCreatureInfo.takeActions(cardActions, true)
+            // For player, best result on player mean they take minimum of damages
+            val bestActionResult = bestCreatureInfo.takeActions(cardActions, false)
+            if (worstActionResult != ActionResult.EMPTY || bestActionResult != ActionResult.EMPTY) {
+                renderMessages.add(
+                    buildString {
+                        append("--Card--".colored("#FCBA03"))
+                        appendLine()
+                        append(
+                            buildOutcomeMessage(
+                                worstOutcomeResult = OutcomeResult(worstCreatureInfo, worstActionResult),
+                                bestOutcomeResult = OutcomeResult(bestCreatureInfo, bestActionResult),
+                            ),
+                        )
+                    }
                 )
             }
-        } else if (endTurnIntentActions.isNotEmpty()) {
-            msgBuilder.append("--End Turn--".colored("#FCBA03"))
-                .append("\n")
-            val (worstEndTurnOutcome, bestEndTurnOutcome) = endTurnIntentActions.calculateOutcome(
-                creatureInfo
-            )
-            msgBuilder.buildOutcomeMessage(
-                worstOutcome = worstEndTurnOutcome,
-                bestOutcome = bestEndTurnOutcome,
-            )
         }
-        return msgBuilder.toString()
+
+        if (!bestCreatureInfo.isDead) {
+            // For player, worst result on player mean they take maximum of damages
+            val worstEndTurnActionResult =
+                getEndTurnIntentActions(worstCreatureInfo, hoveredCard, remainingHandCards).let {
+                    worstCreatureInfo.takeActions(it, true)
+                }
+            // For player, best result on player mean they take minimum of damages
+            val bestEndTurnActionResult =
+                getEndTurnIntentActions(bestCreatureInfo, hoveredCard, remainingHandCards).let {
+                    bestCreatureInfo.takeActions(it, false)
+                }
+            if (worstEndTurnActionResult != ActionResult.EMPTY || bestEndTurnActionResult != ActionResult.EMPTY) {
+                renderMessages.add(
+                    buildString {
+                        append("--End Turn--".colored("#FCBA03"))
+                        appendLine()
+                        append(
+                            buildOutcomeMessage(
+                                worstOutcomeResult = OutcomeResult(worstCreatureInfo, worstEndTurnActionResult),
+                                bestOutcomeResult = OutcomeResult(bestCreatureInfo, bestEndTurnActionResult),
+                            ),
+                        )
+                    }
+                )
+            }
+        }
+
+        return renderMessages.joinToString("\n")
     }
 
     private fun AbstractCard.createIntentActions(): List<Action> = buildList {
-        val player = AbstractDungeon.player
-        player.getPower(RagePower.POWER_ID)?.let { ragePower ->
-            if (type == CardType.ATTACK) {
-                add(Action.GainBlock(ragePower.amount, player))
+        repeat(getActionHitCount()) {
+            if (block > 0 && baseBlock >= 0 && !isFakeGainBlockCard) {
+                add(Action.GainBlock(block, AbstractDungeon.player))
             }
-        }
-        player.getPower(AfterImagePower.POWER_ID)?.let { afterImagePower ->
-            add(Action.GainBlock(afterImagePower.amount, player))
-        }
-        player.getHoveredMonster()?.let { hoveredMonster ->
-            hoveredMonster.getPower(BlockReturnPower.POWER_ID)?.let { blockReturnPower ->
-                if (type == CardType.ATTACK) {
-                    add(Action.GainBlock(blockReturnPower.amount, player))
+            AbstractDungeon.player.getHoveredMonster()?.let { hoveredMonster ->
+                hoveredMonster.getPower(BlockReturnPower.POWER_ID)?.let { blockReturnPower ->
+                    add(Action.GainBlock(blockReturnPower.amount, AbstractDungeon.player))
+                }
+                hoveredMonster.getPower(ThornsPower.POWER_ID)?.let { thornsPower ->
+                    add(
+                        Action.DamageThorns(
+                            thornsPower.amount,
+                            ActionTarget.Single(AbstractDungeon.player, false),
+                        )
+                    )
                 }
             }
         }
-        if (block > 0 && baseBlock >= 0 && !isFakeGainBlockCard) {
-            add(Action.GainBlock(block, player))
+        if (cardID == Entrench.ID && AbstractDungeon.player.currentBlock > 0) {
+            add(Action.GainBlock(AbstractDungeon.player.currentBlock, AbstractDungeon.player))
+        }
+
+        AbstractDungeon.player.getPower(RagePower.POWER_ID)?.let { ragePower ->
+            if (type == CardType.ATTACK) {
+                add(Action.GainBlock(ragePower.amount, AbstractDungeon.player))
+            }
+        }
+        AbstractDungeon.player.getPower(AfterImagePower.POWER_ID)?.let { afterImagePower ->
+            add(Action.GainBlock(afterImagePower.amount, AbstractDungeon.player))
         }
 
         // Healing or Losing HP effects
         when (cardID) {
             BandageUp.ID, Bite.ID -> {
-                add(Action.GainHP(magicNumber, player))
+                add(Action.GainHP(magicNumber, AbstractDungeon.player))
             }
 
             Offering.ID -> {
-                add(Action.LoseHP(6, player))
+                add(Action.LoseHP(6, AbstractDungeon.player))
             }
 
             Bloodletting.ID, JAX.ID -> {
-                add(Action.LoseHP(3, player))
+                add(Action.LoseHP(3, AbstractDungeon.player))
             }
 
             Hemokinesis.ID -> {
-                add(Action.LoseHP(magicNumber, player))
+                add(Action.LoseHP(magicNumber, AbstractDungeon.player))
             }
         }
 
         // Losing HP by curse
-        if (player.hasRelic(BlueCandle.ID) && type == CardType.CURSE) {
-            add(Action.LoseHP(1, player))
+        if (type == CardType.CURSE && AbstractDungeon.player.hasRelic(BlueCandle.ID)) {
+            add(Action.LoseHP(1, AbstractDungeon.player))
         }
 
-        val painCardCount = player.hand.group.count {
+        AbstractDungeon.player.hand.group.count {
             it.cardID == Pain.ID && it.uuid != this@createIntentActions.uuid
+        }.let { painCardCount ->
+            add(Action.LoseHP(painCardCount, AbstractDungeon.player))
         }
 
-        if (painCardCount > 0) {
-            add(Action.LoseHP(painCardCount, player))
+        // Apply BirdFacedUrn relic if needed
+        if (type == CardType.POWER && AbstractDungeon.player.hasRelic(BirdFacedUrn.ID)) {
+            add(Action.GainHP(2, AbstractDungeon.player))
         }
     }
 
     private fun getCardIntentActions(hoveredCard: AbstractCard? = null): Pair<List<Action>, List<AbstractCard>> {
-        val player = AbstractDungeon.player
         val handCards = AbstractDungeon.player.hand.group.toMutableList()
+
         //Resolve card actions
         val cardActions = hoveredCard?.let { hoveringCard ->
             if (!hoveringCard.isCardPlayable()) {
                 return@let emptyList()
             }
 
-            val cardHitCount = hoveringCard.getActionHitCount()
-            val baseAction = List(cardHitCount) {
-                hoveringCard.createIntentActions().asGroupedAction()
-            }.asGroupedAction()
+            val baseAction = hoveringCard.createIntentActions().asGroupedAction()
             val actions = mutableListOf<Action>(baseAction)
-            AbstractDungeon.player.powers.forEach { power ->
-                when (power.ID) {
-                    DoubleTapPower.POWER_ID -> {
-                        if (hoveringCard.type == CardType.ATTACK) {
-                            actions.addToBottom(baseAction)
-                        }
-                    }
-
-                    DuplicationPower.POWER_ID -> {
-                        actions.addToBottom(baseAction)
-                    }
-
-                    EchoPower.POWER_ID -> {
-                        val cardsDoubledThisTurn = power.getPrivateField<Int>("cardsDoubledThisTurn") ?: 0
-                        if (power.amount > 0 &&
-                            AbstractDungeon.actionManager.cardsPlayedThisTurn.size + 1 - cardsDoubledThisTurn <= power.amount
-                        ) {
-                            actions.addToBottom(baseAction)
-                        }
-                    }
+            if (hoveringCard.cardID == Entrench.ID) {
+                val initialCurrentBlock = AbstractDungeon.player.currentBlock
+                actions.addDuplicationCardActionIfNeeded(hoveringCard) {
+                    AbstractDungeon.player.currentBlock *= 2
+                    createIntentActions().asGroupedAction()
                 }
-            }
-
-            // Apply Necronomicon relic if needed
-            player.getRelic(Necronomicon.ID)?.let { necronomiconRelic ->
-                if (hoveringCard.type == CardType.ATTACK && necronomiconRelic.checkTrigger()) {
-                    actions.addToBottom(baseAction)
+                AbstractDungeon.player.currentBlock = initialCurrentBlock
+            } else {
+                actions.addDuplicationCardActionIfNeeded(hoveringCard) {
+                    createIntentActions().asGroupedAction()
                 }
-            }
-
-            // Apply BirdFacedUrn relic if needed
-            if (player.hasRelic(BirdFacedUrn.ID) && hoveringCard.type == CardType.POWER) {
-                actions.addToBottom(Action.GainHP(2, player))
             }
 
             // Apply FeelNoPain power if needed
-            if (player.hasPower(FeelNoPainPower.POWER_ID)) {
-                val feelNoPainPower = player.getPower(FeelNoPainPower.POWER_ID)
+            AbstractDungeon.player.getPower(FeelNoPainPower.POWER_ID)?.let { feelNoPainPower ->
                 actions.replacesWith { originActions ->
                     var handCardInfos = handCards.toSimpleCardInfoList()
                     originActions.mapIndexed { index, action ->
@@ -225,14 +218,14 @@ object PlayerRenderer {
                         listOf(action)
                             .plus(
                                 if (exhaustInfo.selfExhaust && index == 0) {
-                                    Action.GainBlock(feelNoPainPower.amount, player)
+                                    Action.GainBlock(feelNoPainPower.amount, AbstractDungeon.player)
                                 } else {
                                     Action.NoAction
                                 }
                             )
                             .plus(
                                 List(exhaustInfo.exhaustInHand.size + exhaustInfo.exhaustInDrawPile) {
-                                    Action.GainBlock(feelNoPainPower.amount, player)
+                                    Action.GainBlock(feelNoPainPower.amount, AbstractDungeon.player)
                                 }
                             )
                             .asGroupedAction()
@@ -254,13 +247,13 @@ object PlayerRenderer {
                 it.uuid == hoveringCard.uuid
             }
             actions.toList()
-        }?.flatten() ?: emptyList()
+        }?.flatten().orEmpty()
         return cardActions to handCards
     }
 
     private fun getEndTurnIntentActions(
+        creatureInfo: CreatureInfo<AbstractPlayer>,
         hoveredCard: AbstractCard? = null,
-        cardActions: List<Action>,
         remainingHandCards: List<AbstractCard>,
     ): List<Action> {
         val player = AbstractDungeon.player
@@ -269,10 +262,7 @@ object PlayerRenderer {
             player.relics.forEach { relic ->
                 when (relic.relicId) {
                     Orichalcum.ID -> {
-                        val willCardGainBlock = cardActions.flatten().any {
-                            it is Action.GainBlock && it.value > 0
-                        }
-                        if ((player.currentBlock == 0 && !willCardGainBlock) || (relic as Orichalcum).trigger) {
+                        if (creatureInfo.remainBlock == 0 || (relic as Orichalcum).trigger) {
                             addToTop(Action.GainBlock(6, player))
                         }
                     }
@@ -358,16 +348,22 @@ object PlayerRenderer {
         // Resolve monster attack intent
         val monsterAttackIntentActions = AbstractDungeon.getMonsters().aliveMonsters.getAttackIntentActions()
 
-        val startOfNextTurnActions = buildList {
+        // Resolve start of monster turn actions
+        val startOfMonsterTurnActions = buildList {
             if (player.hasPower(PoisonPower.POWER_ID)) {
                 val poisonPower = player.getPower(PoisonPower.POWER_ID)
                 addToBottom(Action.LoseHP(poisonPower.amount, player))
             }
         }
 
+        // Resolve pending actions
+        val pendingActions = creatureInfo.pendingActions.toList().also {
+            creatureInfo.pendingActions.clear()
+        }
+
         return (relicEffect + powerPreHandEffects + handDamageActions +
                 orbsActions + powerAfterHandEffects + monsterAttackIntentActions +
-                startOfNextTurnActions).flatten()
+                startOfMonsterTurnActions + pendingActions).flatten()
     }
 
 }

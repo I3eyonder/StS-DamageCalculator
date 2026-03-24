@@ -6,7 +6,7 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.megacrit.cardcrawl.helpers.FontHelper
 import dmgcalculator.config.ModConfig
-import dmgcalculator.entities.Outcome
+import dmgcalculator.entities.OutcomeResult
 import dmgcalculator.entities.Range
 import dmgcalculator.entities.sorted
 import dmgcalculator.renderer.toSegments
@@ -145,95 +145,95 @@ fun Range.colored(color: String, reversed: Boolean = false): String {
     }
 }
 
-fun StringBuilder.buildOutcomeMessage(
-    worstOutcome: Outcome,
-    bestOutcome: Outcome,
+fun buildOutcomeMessage(
+    worstOutcomeResult: OutcomeResult,
+    bestOutcomeResult: OutcomeResult,
     showRemainHP: Boolean = true,
-    showTakenDamage: Boolean = true,
-) {
+): String = buildList {
     // --- Taken damage ---
-    if (showTakenDamage) {
-        append(
+    if (worstOutcomeResult.actionResult.takenDamage > 0 || bestOutcomeResult.actionResult.takenDamage > 0) {
+        add(
             "Take %s damage".format(
-                Range(worstOutcome.damage, bestOutcome.damage).sorted().colored("#FF0000")
+                Range(worstOutcomeResult.actionResult.takenDamage, bestOutcomeResult.actionResult.takenDamage).sorted()
+                    .colored("#FF0000")
             )
         )
     }
 
     // --- Blocked amount --- (only if enabled in config)
     if (ModConfig.showBlockInfo) {
-        if (worstOutcome.blocked == bestOutcome.blocked) {
-            if (bestOutcome.blocked > 0) {
-                append("\n")
-                    .append(
-                        "(%s blocked)".format(
-                            bestOutcome.blocked.toString().colored("#00FF00"),
-                        )
+        if (worstOutcomeResult.actionResult.blockedAmount == bestOutcomeResult.actionResult.blockedAmount) {
+            if (bestOutcomeResult.actionResult.blockedAmount > 0) {
+                add(
+                    "(%s blocked)".format(
+                        bestOutcomeResult.actionResult.blockedAmount.toString().colored("#00FF00"),
                     )
-                    .append("\n")
-                    .append(
-                        "(%s blocks remaining)".format(
-                            bestOutcome.remainBlock.toString().colored("#00FF00"),
-                        )
+                )
+                add(
+                    "(%s blocks remaining)".format(
+                        bestOutcomeResult.creatureInfo.remainBlock.toString().colored("#00FF00"),
                     )
+                )
             }
         } else {
-            append("\n")
-                .append(
-                    "(%s blocked)".format(
-                        Range(worstOutcome.blocked, bestOutcome.blocked).sorted().colored("#00FF00"),
-                    )
+            add(
+                "(%s blocked)".format(
+                    Range(
+                        worstOutcomeResult.actionResult.blockedAmount,
+                        bestOutcomeResult.actionResult.blockedAmount,
+                    ).sorted().colored("#00FF00"),
                 )
-                .append("\n")
-                .append(
-                    "(%s blocks remaining)".format(
-                        Range(worstOutcome.remainBlock, bestOutcome.remainBlock).sorted().colored("#00FF00"),
-                    )
+            )
+            add(
+                "(%s blocks remaining)".format(
+                    Range(
+                        worstOutcomeResult.creatureInfo.remainBlock,
+                        bestOutcomeResult.creatureInfo.remainBlock,
+                    ).sorted().colored("#00FF00"),
                 )
+            )
         }
     }
 
     // --- Extra info ---
-    if (worstOutcome.adjustHP == bestOutcome.adjustHP) {
-        if (bestOutcome.adjustHP < 0) {
-            append("\n")
-                .append(
-                    "Lose extra %s HP".format(
-                        bestOutcome.adjustHP.unaryMinus().toString().colored("#FF0000")
-                    )
+    if (worstOutcomeResult.actionResult.adjustHP == bestOutcomeResult.actionResult.adjustHP) {
+        if (bestOutcomeResult.actionResult.adjustHP < 0) {
+            add(
+                "Lose extra %s HP".format(
+                    bestOutcomeResult.actionResult.adjustHP.unaryMinus().toString().colored("#FF0000")
                 )
-        } else if (bestOutcome.adjustHP > 0) {
-            append("\n")
-                .append(
-                    "Gain extra %s HP".format(
-                        bestOutcome.adjustHP.toString().colored("#00FF00")
-                    )
+            )
+        } else if (bestOutcomeResult.actionResult.adjustHP > 0) {
+            add(
+                "Gain extra %s HP".format(
+                    bestOutcomeResult.actionResult.adjustHP.toString().colored("#00FF00")
                 )
+            )
         }
     }
 
     // --- Remaining HP ---
     if (showRemainHP) {
-        if (worstOutcome.remainHP == bestOutcome.remainHP) {
-            if (bestOutcome.isDead) {
-                append("\n")
-                    .append("DEAD".colored("#FF0000"))
+        if (worstOutcomeResult.creatureInfo.remainHP == bestOutcomeResult.creatureInfo.remainHP) {
+            if (bestOutcomeResult.creatureInfo.isDead) {
+                add("DEAD".colored("#FF0000"))
             } else {
-                append("\n")
-                    .append(
-                        "%s HP remaining".format(
-                            bestOutcome.remainHP.toString().colored("#00BFFF")
-                        )
-                    )
-            }
-        } else {
-            append("\n")
-                .append(
+                add(
                     "%s HP remaining".format(
-                        Range(worstOutcome.remainHP, bestOutcome.remainHP).sorted()
-                            .colored("#00BFFF", reversed = true)
+                        bestOutcomeResult.creatureInfo.remainHP.toString().colored("#00BFFF")
                     )
                 )
+            }
+        } else {
+            add(
+                "%s HP remaining".format(
+                    Range(
+                        worstOutcomeResult.creatureInfo.remainHP,
+                        bestOutcomeResult.creatureInfo.remainHP,
+                    ).sorted()
+                        .colored("#00BFFF", reversed = true)
+                )
+            )
         }
     }
-}
+}.joinToString("\n")
