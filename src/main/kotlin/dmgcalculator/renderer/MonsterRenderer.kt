@@ -21,6 +21,7 @@ import com.megacrit.cardcrawl.powers.watcher.VigorPower
 import com.megacrit.cardcrawl.powers.watcher.WaveOfTheHandPower
 import com.megacrit.cardcrawl.relics.*
 import com.megacrit.cardcrawl.stances.WrathStance
+import dmgcalculator.config.ModConfig
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addDuplicationCardActionIfNeeded
@@ -127,7 +128,7 @@ object MonsterRenderer {
                 }
             }
 
-            if (!worstMonsterInfo.isDead) {
+            if (ModConfig.calculatePlayerThornsDamage && !worstMonsterInfo.isDead) {
                 // For player, worst result on monster mean they take minimum of damages
                 val worstThornActionResult = worstMonsterInfo.pendingActions.let {
                     worstMonsterInfo.takeActions(it, false)

@@ -7,5 +7,8 @@ package dmgcalculator.config
 object ModConfig {
     var showBlockInfo = true
         internal set
+
+    var calculatePlayerThornsDamage = true
+        internal set
 }
 

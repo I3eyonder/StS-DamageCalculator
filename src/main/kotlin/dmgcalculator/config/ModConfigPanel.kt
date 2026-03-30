@@ -16,12 +16,27 @@ import java.util.*
  * Provides UI controls for users to customize mod behavior.
  */
 object ModConfigPanel {
+
     private const val SHOW_BLOCK_INFO_KEY = "SHOW_BLOCK_INFO_KEY"
+    private const val CALCULATE_PLAYER_THORNS_DAMAGE = "CALCULATE_PLAYER_THORNS_DAMAGE"
+
     private lateinit var config: SpireConfig
 
     fun createPanel(): ModPanel {
-        val defaults = Properties()
-        defaults.setProperty(SHOW_BLOCK_INFO_KEY, "true")
+        setupConfig()
+        ModConfig.showBlockInfo = config.getBool(SHOW_BLOCK_INFO_KEY)
+        ModConfig.calculatePlayerThornsDamage = config.getBool(CALCULATE_PLAYER_THORNS_DAMAGE)
+        return ModPanel().apply {
+            addUIElement(createToggleBlockInfoButton(this))
+            addUIElement(createToggleCalculatePlayerThornsDamageButton(this))
+        }
+    }
+
+    private fun setupConfig() {
+        val defaults = Properties().apply {
+            setProperty(SHOW_BLOCK_INFO_KEY, "true")
+            setProperty(CALCULATE_PLAYER_THORNS_DAMAGE, "true")
+        }
         try {
             config = SpireConfig("DmgCalculator", "config", defaults).apply {
                 save()
@@ -29,21 +44,30 @@ object ModConfigPanel {
         } catch (e: IOException) {
             e.printStackTrace()
         }
-        ModConfig.showBlockInfo = config.getBool(SHOW_BLOCK_INFO_KEY)
-        val panel = ModPanel()
-        val toggleBlockInfo = ModLabeledToggleButton(
-            "Show block info.",
-            400.0f, 700.0f, Settings.CREAM_COLOR, FontHelper.charDescFont,
-            ModConfig.showBlockInfo, panel,
+    }
+
+    private fun createToggleBlockInfoButton(panel: ModPanel): ModLabeledToggleButton = ModLabeledToggleButton(
+        "Show block info.",
+        400.0f, 700.0f, Settings.CREAM_COLOR, FontHelper.charDescFont,
+        ModConfig.showBlockInfo, panel,
+        { label: ModLabel -> },
+        { button: ModToggleButton ->
+            ModConfig.showBlockInfo = button.enabled
+            config.setBool(SHOW_BLOCK_INFO_KEY, button.enabled)
+            saveConfig()
+        })
+
+    private fun createToggleCalculatePlayerThornsDamageButton(panel: ModPanel): ModLabeledToggleButton =
+        ModLabeledToggleButton(
+            "Calculate player thorns damage.",
+            400.0f, 650.0f, Settings.CREAM_COLOR, FontHelper.charDescFont,
+            ModConfig.calculatePlayerThornsDamage, panel,
             { label: ModLabel -> },
             { button: ModToggleButton ->
-                ModConfig.showBlockInfo = button.enabled
-                config.setBool(SHOW_BLOCK_INFO_KEY, button.enabled)
+                ModConfig.calculatePlayerThornsDamage = button.enabled
+                config.setBool(CALCULATE_PLAYER_THORNS_DAMAGE, button.enabled)
                 saveConfig()
             })
-        panel.addUIElement(toggleBlockInfo)
-        return panel
-    }
 
     private fun saveConfig() {
         try {
