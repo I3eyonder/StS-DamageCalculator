@@ -565,14 +565,6 @@ object MonsterRenderer {
         }
     }
 
-    private fun CreatureInfo<out AbstractCreature>.ifNoArtifactPower(block: () -> Unit) {
-        if (getPowerAmount(ArtifactPower.POWER_ID) <= 0) {
-            block()
-        } else {
-            reducePowerAmount(ArtifactPower.POWER_ID, 1)
-        }
-    }
-
     private fun AbstractCard.createIntentActions(
         monsterInfo: CreatureInfo<AbstractMonster>,
         monsterIndex: Int,
@@ -595,9 +587,7 @@ object MonsterRenderer {
                                 add(Action.DamageNormal(damagePerHit, monster))
                             } else {
                                 add(
-                                    Action.DamageNormal(damagePerHit, monster).apply {
-                                        addTags(Bane.ID)
-                                    }
+                                    Action.DamageNormal(damagePerHit, monster).withTags(Bane.ID)
                                 )
                             }
                         } else {

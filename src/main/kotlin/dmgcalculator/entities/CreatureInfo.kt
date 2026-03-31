@@ -184,7 +184,7 @@ data class CreatureInfo<T : AbstractCreature>(
                                 if (AbstractDungeon.player.hasRelic(SneckoSkull.ID)) {
                                     poisonAmount += 1
                                 }
-                                if (getPowerAmount(ArtifactPower.POWER_ID) <= 0) {
+                                ifNoArtifactPower {
                                     refineActions.add(
                                         Action.LoseHP(poisonAmount, action.target).withPendingTag()
                                     )
@@ -194,8 +194,6 @@ data class CreatureInfo<T : AbstractCreature>(
                                     AbstractDungeon.player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
                                         damage += sadisticPower.amount
                                     }
-                                } else {
-                                    reducePowerAmount(ArtifactPower.POWER_ID, 1)
                                 }
                             }
                         }
@@ -228,5 +226,13 @@ data class CreatureInfo<T : AbstractCreature>(
                 ActionResult.EMPTY
             }
         }
+    }
+}
+
+fun CreatureInfo<out AbstractCreature>.ifNoArtifactPower(block: () -> Unit) {
+    if (getPowerAmount(ArtifactPower.POWER_ID) <= 0) {
+        block()
+    } else {
+        reducePowerAmount(ArtifactPower.POWER_ID, 1)
     }
 }
