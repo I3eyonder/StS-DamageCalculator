@@ -571,6 +571,7 @@ object MonsterRenderer {
         aliveMonsterCount: Int,
     ): List<Action> {
         val monster = monsterInfo.creature
+        calculateCardDamage(monster)
         val cardHitCount = getActionHitCount()
         val damagePerHit = getDamagePerHit(monsterIndex)
         val orbDamageMultiplier = if (monsterInfo.hasPower(LockOnPower.POWER_ID)) 1.5f else 1f
