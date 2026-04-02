@@ -136,8 +136,22 @@ object PlayerRenderer {
                 }
             }
         }
+
         if (cardID == Entrench.ID && AbstractDungeon.player.currentBlock > 0) {
             add(Action.GainBlock(AbstractDungeon.player.currentBlock, AbstractDungeon.player))
+        }
+
+        AbstractDungeon.getMonsters().aliveMonsters.forEach { monster ->
+            monster.getPower(SharpHidePower.POWER_ID)?.let { sharpHidePower ->
+                if (type == CardType.ATTACK) {
+                    add(
+                        Action.DamageThorns(
+                            sharpHidePower.amount,
+                            ActionTarget.Single(AbstractDungeon.player, false),
+                        )
+                    )
+                }
+            }
         }
 
         AbstractDungeon.player.getPower(RagePower.POWER_ID)?.let { ragePower ->
