@@ -29,6 +29,25 @@ private val randomAttackCards = listOf(
     ThunderStrike.ID,
 )
 
+private val damageAllEnemiesCards = listOf(
+    Cleave.ID,
+    ThunderClap.ID,
+    Whirlwind.ID,
+    Immolate.ID,
+    Reaper.ID,
+    DaggerSpray.ID,
+    AllOutAttack.ID,
+    DieDieDie.ID,
+    GrandFinale.ID,
+    SweepingBeam.ID,
+    Blizzard.ID,
+    DoomAndGloom.ID,
+    Hyperbeam.ID,
+    Consecrate.ID,
+    Conclude.ID,
+    DramaticEntrance.ID,
+)
+
 private val giveVulnerableCards = listOf(
     Bash.ID,
     ThunderClap.ID,
@@ -112,10 +131,16 @@ val AbstractCard.isOrbChannelCard: Boolean
     get() = orbChannelCards.contains(cardID)
 
 val AbstractCard.isOrbEvokeCard: Boolean
-    get() = orbEvokeCards.contains(cardID)
+    get() = when (cardID) {
+        Fission.ID -> upgraded
+        else -> orbEvokeCards.contains(cardID)
+    }
 
 val AbstractCard.isRandomAttackCard: Boolean
     get() = randomAttackCards.contains(cardID)
+
+val AbstractCard.isDamageAllEnemiesCard: Boolean
+    get() = damageAllEnemiesCards.contains(cardID)
 
 val AbstractCard.canGiveVulnerable: Boolean
     get() = giveVulnerableCards.contains(cardID)

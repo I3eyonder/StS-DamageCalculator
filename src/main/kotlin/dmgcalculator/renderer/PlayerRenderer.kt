@@ -122,11 +122,16 @@ object PlayerRenderer {
             if (block > 0 && baseBlock >= 0 && !isFakeGainBlockCard) {
                 add(Action.GainBlock(block, AbstractDungeon.player))
             }
-            AbstractDungeon.player.getHoveredMonster()?.let { hoveredMonster ->
-                hoveredMonster.getPower(BlockReturnPower.POWER_ID)?.let { blockReturnPower ->
+            val targetingMonsters = if (isDamageAllEnemiesCard) {
+                AbstractDungeon.getMonsters().aliveMonsters
+            } else {
+                listOfNotNull(AbstractDungeon.player.getHoveredMonster())
+            }
+            targetingMonsters.forEach { targetingMonster ->
+                targetingMonster.getPower(BlockReturnPower.POWER_ID)?.let { blockReturnPower ->
                     add(Action.GainBlock(blockReturnPower.amount, AbstractDungeon.player))
                 }
-                hoveredMonster.getPower(ThornsPower.POWER_ID)?.let { thornsPower ->
+                targetingMonster.getPower(ThornsPower.POWER_ID)?.let { thornsPower ->
                     add(
                         Action.DamageThorns(
                             thornsPower.amount,
