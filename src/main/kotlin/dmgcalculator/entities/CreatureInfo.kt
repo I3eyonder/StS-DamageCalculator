@@ -1,6 +1,6 @@
 package dmgcalculator.entities
 
-import com.megacrit.cardcrawl.cards.green.Bane
+
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
@@ -8,6 +8,7 @@ import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.monsters.beyond.Nemesis
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.relics.*
+import dmgcalculator.util.Utils.addToTop
 import dmgcalculator.util.Utils.getBlockedAmount
 import dmgcalculator.util.Utils.getNetDamageAmount
 
@@ -83,12 +84,13 @@ data class CreatureInfo<T : AbstractCreature>(
             }
 
             Action.RefineStats -> {
-                val refineActions = refineActions.toList()
-                this.refineActions.clear()
-                if (refineActions.isNotEmpty()) {
-                    takeActions(refineActions, useMax)
-                } else {
-                    ActionResult.EMPTY
+                refineActions.toList().let { actions ->
+                    refineActions.clear()
+                    if (actions.isNotEmpty()) {
+                        takeActions(actions, useMax)
+                    } else {
+                        ActionResult.EMPTY
+                    }
                 }
             }
 
@@ -153,7 +155,7 @@ data class CreatureInfo<T : AbstractCreature>(
                                     // Armor broken
                                     if (AbstractDungeon.player.hasPower(SadisticPower.POWER_ID)) {
                                         val sadisticPower = AbstractDungeon.player.getPower(SadisticPower.POWER_ID)
-                                        damage += sadisticPower.amount
+                                        refineActions.add(Action.DamageThorns(sadisticPower.amount, action.target))
                                     }
                                 }
                             }
@@ -161,51 +163,49 @@ data class CreatureInfo<T : AbstractCreature>(
                     }
                 }
 
-                if (damage > 0) {
-                    // Apply Invincible power
-                    val invincibleAmount = getPowerAmount(InvinciblePower.POWER_ID)
-                    if (invincibleAmount >= 0) {
-                        damage = damage.coerceAtMost(invincibleAmount)
-                        setPowerAmount(InvinciblePower.POWER_ID, (invincibleAmount - damage).coerceAtLeast(0))
+                // Apply Invincible power
+                val invincibleAmount = getPowerAmount(InvinciblePower.POWER_ID)
+                if (invincibleAmount >= 0) {
+                    damage = damage.coerceAtMost(invincibleAmount)
+                    setPowerAmount(InvinciblePower.POWER_ID, (invincibleAmount - damage).coerceAtLeast(0))
+                }
+
+                if (damage > 0 && action is Action.DamageNormal) {
+                    // Apply Curl Up power
+                    val curlUpPowerAmount = getPowerAmount(CurlUpPower.POWER_ID)
+                    if (curlUpPowerAmount > 0) {
+                        refineActions.addToTop(Action.GainBlock(curlUpPowerAmount, action.target))
+                        setPowerAmount(CurlUpPower.POWER_ID, -1)
                     }
 
-                    if (action is Action.DamageNormal) {
-                        // Apply Curl Up power
-                        val curlUpPowerAmount = getPowerAmount(CurlUpPower.POWER_ID)
-                        if (curlUpPowerAmount > 0) {
-                            refineActions.add(Action.GainBlock(curlUpPowerAmount, action.target))
-                            setPowerAmount(CurlUpPower.POWER_ID, -1)
-                        }
-
-                        if (creature is AbstractMonster) {
-                            // Apply EnvenomPower
-                            AbstractDungeon.player.getPower(EnvenomPower.POWER_ID)?.let { envenomPower ->
-                                var poisonAmount = envenomPower.amount
-                                if (AbstractDungeon.player.hasRelic(SneckoSkull.ID)) {
-                                    poisonAmount += 1
+                    if (creature is AbstractMonster) {
+                        // Apply EnvenomPower
+                        AbstractDungeon.player.getPower(EnvenomPower.POWER_ID)?.let { envenomPower ->
+                            var poisonAmount = envenomPower.amount
+                            if (AbstractDungeon.player.hasRelic(SneckoSkull.ID)) {
+                                poisonAmount += 1
+                            }
+                            ifDebuffApplied {
+                                refineActions.add(
+                                    Action.LoseHP(poisonAmount, action.target).withPendingTag()
+                                )
+                                if (action.hasTag(ActionTag.Bane)) {
+                                    refineActions.addToTop(action.copy())
                                 }
-                                ifNoArtifactPower {
-                                    refineActions.add(
-                                        Action.LoseHP(poisonAmount, action.target).withPendingTag()
-                                    )
-                                    if (action.hasTag(Bane.ID)) {
-                                        refineActions.add(action.copy())
-                                    }
-                                    AbstractDungeon.player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
-                                        damage += sadisticPower.amount
-                                    }
+                                AbstractDungeon.player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
+                                    refineActions.add(Action.DamageThorns(sadisticPower.amount, action.target))
                                 }
                             }
                         }
-
-                        // Apply MalleablePower
-                        val malleableAmount = getPowerAmount(MalleablePower.POWER_ID)
-                        if (malleableAmount >= 0 && damage < remainHP) {
-                            refineActions.add(Action.GainBlock(malleableAmount, action.target))
-                            increasePowerAmount(MalleablePower.POWER_ID, 1)
-                        }
-                        refineActions.add(Action.RefineStats)
                     }
+
+                    // Apply MalleablePower
+                    val malleableAmount = getPowerAmount(MalleablePower.POWER_ID)
+                    if (malleableAmount >= 0 && damage < remainHP) {
+                        refineActions.add(Action.GainBlock(malleableAmount, action.target))
+                        increasePowerAmount(MalleablePower.POWER_ID, 1)
+                    }
+                    refineActions.add(Action.RefineStats)
                 }
 
                 remainHP = (remainHP - damage).coerceAtLeast(0)
@@ -229,7 +229,7 @@ data class CreatureInfo<T : AbstractCreature>(
     }
 }
 
-fun CreatureInfo<out AbstractCreature>.ifNoArtifactPower(block: () -> Unit) {
+fun CreatureInfo<out AbstractCreature>.ifDebuffApplied(block: () -> Unit) {
     if (getPowerAmount(ArtifactPower.POWER_ID) <= 0) {
         block()
     } else {

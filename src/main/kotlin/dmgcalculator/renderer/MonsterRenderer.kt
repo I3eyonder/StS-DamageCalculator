@@ -10,7 +10,6 @@ import com.megacrit.cardcrawl.cards.purple.CrushJoints
 import com.megacrit.cardcrawl.cards.purple.Indignation
 import com.megacrit.cardcrawl.cards.purple.PressurePoints
 import com.megacrit.cardcrawl.cards.purple.SashWhip
-import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.orbs.*
@@ -587,9 +586,7 @@ object MonsterRenderer {
                                 add(Action.DamageNormal(damagePerHit, monster))
                                 add(Action.DamageNormal(damagePerHit, monster))
                             } else {
-                                add(
-                                    Action.DamageNormal(damagePerHit, monster).withTags(Bane.ID)
-                                )
+                                add(Action.DamageNormal(damagePerHit, monster).withTags(ActionTag.Bane))
                             }
                         } else {
                             add(Action.DamageNormal(damagePerHit, monster))
@@ -676,7 +673,7 @@ object MonsterRenderer {
                         }
                         if (shouldTrigger) {
                             repeat(getDebuffInstanceCount()) {
-                                monsterInfo.ifNoArtifactPower {
+                                monsterInfo.ifDebuffApplied {
                                     add(Action.DamageThorns(sadisticPower.amount, ActionTarget.Single(monster)))
                                 }
                             }
@@ -684,12 +681,12 @@ object MonsterRenderer {
                     }
                     if (AbstractDungeon.player.hasPower(WaveOfTheHandPower.POWER_ID)) {
                         if (type == CardType.ATTACK && AbstractDungeon.player.hasPower(RagePower.POWER_ID)) {
-                            monsterInfo.ifNoArtifactPower {
+                            monsterInfo.ifDebuffApplied {
                                 add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
                             }
                         }
                         if (block > 0 && baseBlock >= 0) {
-                            monsterInfo.ifNoArtifactPower {
+                            monsterInfo.ifDebuffApplied {
                                 add(Action.DamageThorns(sadisticPower.amount, ActionTarget.All))
                             }
                         }
@@ -714,7 +711,7 @@ object MonsterRenderer {
                     when (cardID) {
                         BouncingFlask.ID -> {
                             repeat(magicNumber) {
-                                monsterInfo.ifNoArtifactPower {
+                                monsterInfo.ifDebuffApplied {
                                     if (aliveMonsterCount == 1) {
                                         var poisonAmount = getPoisonAmount(monster)
                                         if (AbstractDungeon.player.hasRelic(SneckoSkull.ID)) {
@@ -734,7 +731,7 @@ object MonsterRenderer {
                         }
 
                         else -> {
-                            monsterInfo.ifNoArtifactPower {
+                            monsterInfo.ifDebuffApplied {
                                 var poisonAmount = getPoisonAmount(monster)
                                 if (AbstractDungeon.player.hasRelic(SneckoSkull.ID)) {
                                     poisonAmount += 1

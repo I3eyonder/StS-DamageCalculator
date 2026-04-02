@@ -4,16 +4,19 @@ import com.megacrit.cardcrawl.core.AbstractCreature
 
 sealed class Action(open val min: Int, open val max: Int, open val target: ActionTarget) {
 
-    private val tags = mutableSetOf<String>()
+    private val _tags = mutableSetOf<ActionTag>()
 
-    fun hasTag(tag: String) = tags.contains(tag)
+    val tags: Set<ActionTag>
+        get() = _tags.toSet()
 
-    fun addTags(vararg tags: String) {
-        this.tags.addAll(tags)
+    fun hasTag(tag: ActionTag) = _tags.contains(tag)
+
+    fun addTags(vararg tags: ActionTag) {
+        this._tags.addAll(tags)
     }
 
-    fun removeTags(vararg tags: String) {
-        this.tags.removeAll(tags.toSet())
+    fun removeTags(vararg tags: ActionTag) {
+        this._tags.removeAll(tags.toSet())
     }
 
     data class GroupedAction(val actions: List<Action>) : Action(0, 0, ActionTarget.None)
@@ -75,17 +78,22 @@ sealed interface ActionTarget {
     data object None : ActionTarget
 }
 
-fun Action.withTags(vararg tags: String): Action = apply {
+sealed interface ActionTag {
+    data object Bane : ActionTag
+    data object Pending : ActionTag
+}
+
+fun Action.withTags(vararg tags: ActionTag): Action = apply {
     addTags(*tags)
 }
 
-fun Action.withPendingTag(): Action = withTags(Action.TAG_PENDING)
+fun Action.withPendingTag(): Action = withTags(ActionTag.Pending)
 
 fun Action.withoutPendingTag(): Action = apply {
-    removeTags(Action.TAG_PENDING)
+    removeTags(ActionTag.Pending)
 }
 
-fun Action.hasPendingTag(): Boolean = hasTag(Action.TAG_PENDING)
+fun Action.hasPendingTag(): Boolean = hasTag(ActionTag.Pending)
 
 fun List<Action>.asGroupedAction(): Action.GroupedAction {
     return Action.GroupedAction(this)
