@@ -123,6 +123,11 @@ object MonsterRenderer {
             }
 
             if (!bestMonsterInfo.isDead) {
+                // It's start of monster turn now.
+                if (!monster.hasPower(BarricadePower.POWER_ID)) {
+                    worstMonsterInfo.remainBlock = 0
+                    bestMonsterInfo.remainBlock = 0
+                }
                 val worstFinalActionResult =
                     worstMonsterInfo.getFinalIntentActions().let {
                         worstMonsterInfo.takeActions(it, true)
