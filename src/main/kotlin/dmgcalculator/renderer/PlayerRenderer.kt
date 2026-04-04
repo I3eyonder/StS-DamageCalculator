@@ -56,30 +56,28 @@ object PlayerRenderer {
 
     private fun createRenderMessage(hoveredCard: AbstractCard? = null): String {
         val renderMessages = mutableListOf<String>()
-        val initialCreatureInfo = CreatureInfo(AbstractDungeon.player)
+        val initialPlayerInfo = CreatureInfo(AbstractDungeon.player)
         val (cardActions, remainingHandCards) = getCardIntentActions(hoveredCard)
-        val worstCreatureInfo = initialCreatureInfo.copy(
-            powersAmount = initialCreatureInfo.powersAmount.toMutableMap(),
+        val worstPlayerInfo = initialPlayerInfo.copy(
+            powersAmount = initialPlayerInfo.powersAmount.toMutableMap(),
         )
-        val bestCreatureInfo = initialCreatureInfo.copy(
-            powersAmount = initialCreatureInfo.powersAmount.toMutableMap(),
+        val bestPlayerInfo = initialPlayerInfo.copy(
+            powersAmount = initialPlayerInfo.powersAmount.toMutableMap(),
         )
 
         // Card actions
         if (cardActions.isNotEmpty()) {
-            // For player, worst result on player mean they take maximum of damages
-            val worstActionResult = worstCreatureInfo.takeActions(cardActions, true)
-            // For player, best result on player mean they take minimum of damages
-            val bestActionResult = bestCreatureInfo.takeActions(cardActions, false)
-            if (worstActionResult != ActionResult.EMPTY || bestActionResult != ActionResult.EMPTY) {
+            val worstCardActionResult = worstPlayerInfo.takeActions(cardActions, true)
+            val bestCardActionResult = bestPlayerInfo.takeActions(cardActions, false)
+            if (worstCardActionResult != ActionResult.EMPTY || bestCardActionResult != ActionResult.EMPTY) {
                 renderMessages.add(
                     buildString {
                         append("--Card--".colored("#FCBA03"))
                         appendLine()
                         append(
                             buildOutcomeMessage(
-                                worstOutcomeResult = OutcomeResult(worstCreatureInfo, worstActionResult),
-                                bestOutcomeResult = OutcomeResult(bestCreatureInfo, bestActionResult),
+                                worstOutcomeResult = OutcomeResult(worstPlayerInfo, worstCardActionResult),
+                                bestOutcomeResult = OutcomeResult(bestPlayerInfo, bestCardActionResult),
                             ),
                         )
                     }
@@ -87,16 +85,14 @@ object PlayerRenderer {
             }
         }
 
-        if (!bestCreatureInfo.isDead) {
-            // For player, worst result on player mean they take maximum of damages
+        if (!bestPlayerInfo.isDead) {
             val worstEndTurnActionResult =
-                getEndTurnIntentActions(worstCreatureInfo, hoveredCard, remainingHandCards).let {
-                    worstCreatureInfo.takeActions(it, true)
+                getEndTurnIntentActions(worstPlayerInfo, hoveredCard, remainingHandCards).let {
+                    worstPlayerInfo.takeActions(it, true)
                 }
-            // For player, best result on player mean they take minimum of damages
             val bestEndTurnActionResult =
-                getEndTurnIntentActions(bestCreatureInfo, hoveredCard, remainingHandCards).let {
-                    bestCreatureInfo.takeActions(it, false)
+                getEndTurnIntentActions(bestPlayerInfo, hoveredCard, remainingHandCards).let {
+                    bestPlayerInfo.takeActions(it, false)
                 }
             if (worstEndTurnActionResult != ActionResult.EMPTY || bestEndTurnActionResult != ActionResult.EMPTY) {
                 renderMessages.add(
@@ -105,8 +101,8 @@ object PlayerRenderer {
                         appendLine()
                         append(
                             buildOutcomeMessage(
-                                worstOutcomeResult = OutcomeResult(worstCreatureInfo, worstEndTurnActionResult),
-                                bestOutcomeResult = OutcomeResult(bestCreatureInfo, bestEndTurnActionResult),
+                                worstOutcomeResult = OutcomeResult(worstPlayerInfo, worstEndTurnActionResult),
+                                bestOutcomeResult = OutcomeResult(bestPlayerInfo, bestEndTurnActionResult),
                             ),
                         )
                     }

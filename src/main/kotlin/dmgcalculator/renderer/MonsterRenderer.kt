@@ -80,19 +80,17 @@ object MonsterRenderer {
                 powersAmount = initialMonsterInfo.powersAmount.toMutableMap(),
             )
             if (cardIntentActions.isNotEmpty()) {
-                // For player, worst result on monster mean they take minimum of damages
-                val worstActionResult = worstMonsterInfo.takeActions(cardIntentActions, false)
-                // For player, best result on monster mean they take maximum of damages
-                val bestActionResult = bestMonsterInfo.takeActions(cardIntentActions, true)
-                if (worstActionResult != ActionResult.EMPTY || bestActionResult != ActionResult.EMPTY) {
+                val worstCardActionResult = worstMonsterInfo.takeActions(cardIntentActions, true)
+                val bestCardActionResult = bestMonsterInfo.takeActions(cardIntentActions, false)
+                if (worstCardActionResult != ActionResult.EMPTY || bestCardActionResult != ActionResult.EMPTY) {
                     renderMessages.add(
                         buildString {
                             append("--Card--".colored("#FCBA03"))
                             appendLine()
                             append(
                                 buildOutcomeMessage(
-                                    worstOutcomeResult = OutcomeResult(worstMonsterInfo, worstActionResult),
-                                    bestOutcomeResult = OutcomeResult(bestMonsterInfo, bestActionResult),
+                                    worstOutcomeResult = OutcomeResult(worstMonsterInfo, worstCardActionResult),
+                                    bestOutcomeResult = OutcomeResult(bestMonsterInfo, bestCardActionResult),
                                 ),
                             )
                         }
@@ -101,15 +99,13 @@ object MonsterRenderer {
             }
 
             if (!worstMonsterInfo.isDead) {
-                // For player, worst result on monster mean they take minimum of damages
                 val worstEndTurnActionResult =
                     worstMonsterInfo.getEndTurnIntentActions(aliveMonsterCount, hoveredCard).let {
-                        worstMonsterInfo.takeActions(it, false)
+                        worstMonsterInfo.takeActions(it, true)
                     }
-                // For player, best result on monster mean they take maximum of damages
                 val bestEndTurnActionResult =
                     bestMonsterInfo.getEndTurnIntentActions(aliveMonsterCount, hoveredCard).let {
-                        bestMonsterInfo.takeActions(it, true)
+                        bestMonsterInfo.takeActions(it, false)
                     }
                 if (worstEndTurnActionResult != ActionResult.EMPTY || bestEndTurnActionResult != ActionResult.EMPTY) {
                     renderMessages.add(
@@ -603,7 +599,7 @@ object MonsterRenderer {
                     monsterInfo.powersAmount[MarkPower.POWER_ID]?.let { markAmount ->
                         add(Action.LoseHP(markAmount, monster))
                     }
-                    add(Action.LoseHP(magicNumber, ActionTarget.Single(monster)))
+                    add(Action.LoseHP(magicNumber, monster, true))
                 }
 
                 // Apply player's Juggernaut power if needed
@@ -716,12 +712,20 @@ object MonsterRenderer {
                         BouncingFlask.ID -> {
                             repeat(magicNumber) {
                                 monsterInfo.ifDebuffApplied {
+                                    var poisonAmount = getPoisonAmount(monster)
+                                    if (AbstractDungeon.player.hasRelic(SneckoSkull.ID)) {
+                                        poisonAmount += 1
+                                    }
                                     if (aliveMonsterCount == 1) {
-                                        var poisonAmount = getPoisonAmount(monster)
-                                        if (AbstractDungeon.player.hasRelic(SneckoSkull.ID)) {
-                                            poisonAmount += 1
-                                        }
                                         add(Action.LoseHP(poisonAmount, monster, true).withPendingTag())
+                                    } else {
+                                        add(
+                                            Action.LoseHP(
+                                                0,
+                                                poisonAmount,
+                                                ActionTarget.Single(monster, true),
+                                            ).withPendingTag()
+                                        )
                                     }
                                     AbstractDungeon.player.getPower(SadisticPower.POWER_ID)?.let { sadisticPower ->
                                         if (aliveMonsterCount > 1) {

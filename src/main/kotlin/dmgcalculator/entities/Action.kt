@@ -59,12 +59,15 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
     }
 
     data class LoseHP(
-        val value: Int,
+        override val min: Int,
+        override val max: Int,
         override val target: ActionTarget,
-    ) : Action(value, value, target) {
+    ) : Action(min, max, target) {
+        constructor(value: Int, target: ActionTarget) : this(value, value, target)
         constructor(value: Int, target: AbstractCreature, filterable: Boolean = false) : this(
             value,
-            ActionTarget.Single(target, filterable)
+            value,
+            ActionTarget.Single(target, filterable),
         )
 
         override fun makeCopyWithoutTags(): Action = copy()

@@ -148,7 +148,6 @@ fun Range.colored(color: String, reversed: Boolean = false): String {
 fun buildOutcomeMessage(
     worstOutcomeResult: OutcomeResult,
     bestOutcomeResult: OutcomeResult,
-    showRemainHP: Boolean = true,
 ): String = buildList {
     // --- Taken damage ---
     if (worstOutcomeResult.actionResult.takenDamage > 0 || bestOutcomeResult.actionResult.takenDamage > 0) {
@@ -210,30 +209,75 @@ fun buildOutcomeMessage(
                 )
             )
         }
-    }
-
-    // --- Remaining HP ---
-    if (showRemainHP) {
-        if (worstOutcomeResult.creatureInfo.remainHP == bestOutcomeResult.creatureInfo.remainHP) {
-            if (bestOutcomeResult.creatureInfo.isDead) {
-                add("DEAD".colored("#FF0000"))
-            } else {
+    } else {
+        when {
+            worstOutcomeResult.actionResult.adjustHP < 0 && bestOutcomeResult.actionResult.adjustHP < 0 -> {
                 add(
-                    "%s HP remaining".format(
-                        bestOutcomeResult.creatureInfo.remainHP.toString().colored("#00BFFF")
+                    "Lose extra %s HP".format(
+                        Range(
+                            worstOutcomeResult.actionResult.adjustHP.unaryMinus(),
+                            bestOutcomeResult.actionResult.adjustHP.unaryMinus(),
+                        ).sorted().colored("#FF0000")
                     )
                 )
             }
+
+            worstOutcomeResult.actionResult.adjustHP > 0 && bestOutcomeResult.actionResult.adjustHP > 0 -> {
+                add(
+                    "Gain extra %s HP".format(
+                        Range(
+                            worstOutcomeResult.actionResult.adjustHP,
+                            bestOutcomeResult.actionResult.adjustHP,
+                        ).sorted().colored("#00FF00")
+                    )
+                )
+            }
+
+            else -> {
+                if (worstOutcomeResult.actionResult.adjustHP < 0) {
+                    add(
+                        "Lose extra %s HP".format(
+                            Range(
+                                0,
+                                worstOutcomeResult.actionResult.adjustHP.unaryMinus(),
+                            ).sorted().colored("#FF0000")
+                        )
+                    )
+                }
+                if (bestOutcomeResult.actionResult.adjustHP > 0) {
+                    add(
+                        "Gain extra %s HP".format(
+                            Range(
+                                0,
+                                bestOutcomeResult.actionResult.adjustHP,
+                            ).sorted().colored("#00FF00")
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    // --- Remaining HP ---
+    if (worstOutcomeResult.creatureInfo.remainHP == bestOutcomeResult.creatureInfo.remainHP) {
+        if (bestOutcomeResult.creatureInfo.isDead) {
+            add("DEAD".colored("#FF0000"))
         } else {
             add(
                 "%s HP remaining".format(
-                    Range(
-                        worstOutcomeResult.creatureInfo.remainHP,
-                        bestOutcomeResult.creatureInfo.remainHP,
-                    ).sorted()
-                        .colored("#00BFFF", reversed = true)
+                    bestOutcomeResult.creatureInfo.remainHP.toString().colored("#00BFFF")
                 )
             )
         }
+    } else {
+        add(
+            "%s HP remaining".format(
+                Range(
+                    worstOutcomeResult.creatureInfo.remainHP,
+                    bestOutcomeResult.creatureInfo.remainHP,
+                ).sorted()
+                    .colored("#00BFFF", reversed = true)
+            )
+        )
     }
 }.joinToString("\n")
