@@ -65,7 +65,7 @@ data class CreatureInfo<T : AbstractCreature>(
 
     fun takeAction(action: Action, useMax: Boolean): ActionResult {
         if (action.hasPendingTag()) {
-            pendingActions.add(action.withoutPendingTag())
+            pendingActions.add(action.makeCopy().withoutPendingTag())
             return ActionResult.EMPTY
         }
         return when (action) {

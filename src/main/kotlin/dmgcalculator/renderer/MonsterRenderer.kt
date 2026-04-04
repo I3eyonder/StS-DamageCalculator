@@ -129,12 +129,16 @@ object MonsterRenderer {
 
             if (ModConfig.calculatePlayerThornsDamage && !worstMonsterInfo.isDead) {
                 // For player, worst result on monster mean they take minimum of damages
-                val worstThornActionResult = worstMonsterInfo.pendingActions.let {
+                val worstThornActionResult = worstMonsterInfo.pendingActions.toList().let {
                     worstMonsterInfo.takeActions(it, false)
+                }.also {
+                    worstMonsterInfo.pendingActions.clear()
                 }
                 // For player, best result on monster mean they take maximum of damages
-                val bestThornActionResult = bestMonsterInfo.pendingActions.let {
+                val bestThornActionResult = bestMonsterInfo.pendingActions.toList().let {
                     bestMonsterInfo.takeActions(it, true)
+                }.also {
+                    bestMonsterInfo.pendingActions.clear()
                 }
                 if (worstThornActionResult != ActionResult.EMPTY || bestThornActionResult != ActionResult.EMPTY) {
                     renderMessages.add(

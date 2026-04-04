@@ -195,7 +195,9 @@ object PlayerRenderer {
         AbstractDungeon.player.hand.group.count {
             it.cardID == Pain.ID && it.uuid != this@createIntentActions.uuid
         }.let { painCardCount ->
-            add(Action.LoseHP(painCardCount, AbstractDungeon.player))
+            if (painCardCount > 0) {
+                add(Action.LoseHP(painCardCount, AbstractDungeon.player))
+            }
         }
 
         // Apply BirdFacedUrn relic if needed
@@ -367,8 +369,8 @@ object PlayerRenderer {
         // Resolve monster attack intent
         val monsterAttackIntentActions = AbstractDungeon.getMonsters().aliveMonsters.getAttackIntentActions()
 
-        // Resolve start of monster turn actions
-        val startOfMonsterTurnActions = buildList {
+        // Resolve start of next turn actions
+        val startOfNextTurnActions = buildList {
             if (player.hasPower(PoisonPower.POWER_ID)) {
                 val poisonPower = player.getPower(PoisonPower.POWER_ID)
                 addToBottom(Action.LoseHP(poisonPower.amount, player))
@@ -382,7 +384,7 @@ object PlayerRenderer {
 
         return (relicEffect + powerPreHandEffects + handDamageActions +
                 orbsActions + powerAfterHandEffects + monsterAttackIntentActions +
-                startOfMonsterTurnActions + pendingActions).flatten()
+                startOfNextTurnActions + pendingActions).flatten()
     }
 
 }

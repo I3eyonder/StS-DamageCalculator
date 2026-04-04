@@ -11,6 +11,10 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
 
     fun hasTag(tag: ActionTag) = _tags.contains(tag)
 
+    fun addTags(tags: Set<ActionTag>) {
+        this._tags.addAll(tags)
+    }
+
     fun addTags(vararg tags: ActionTag) {
         this._tags.addAll(tags)
     }
@@ -19,7 +23,18 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
         this._tags.removeAll(tags.toSet())
     }
 
-    data class GroupedAction(val actions: List<Action>) : Action(0, 0, ActionTarget.None)
+    fun makeCopy(): Action {
+        return makeCopyWithoutTags().apply {
+            addTags(this@Action.tags)
+        }
+    }
+
+    abstract fun makeCopyWithoutTags(): Action
+
+    data class GroupedAction(val actions: List<Action>) : Action(0, 0, ActionTarget.None) {
+
+        override fun makeCopyWithoutTags() = GroupedAction(actions)
+    }
 
     data class DamageNormal(
         override val min: Int,
@@ -29,6 +44,8 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
         constructor(min: Int, max: Int, target: AbstractCreature) : this(min, max, ActionTarget.Single(target))
         constructor(value: Int, target: ActionTarget = ActionTarget.None) : this(value, value, target)
         constructor(value: Int, target: AbstractCreature) : this(value, value, ActionTarget.Single(target))
+
+        override fun makeCopyWithoutTags(): Action = copy()
     }
 
     data class DamageThorns(
@@ -37,6 +54,8 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
         override val target: ActionTarget = ActionTarget.All,
     ) : Action(min, max, target) {
         constructor(value: Int, target: ActionTarget = ActionTarget.All) : this(value, value, target)
+
+        override fun makeCopyWithoutTags(): Action = copy()
     }
 
     data class LoseHP(
@@ -47,6 +66,8 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
             value,
             ActionTarget.Single(target, filterable)
         )
+
+        override fun makeCopyWithoutTags(): Action = copy()
     }
 
     data class GainHP(
@@ -54,6 +75,8 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
         override val target: ActionTarget,
     ) : Action(value, value, target) {
         constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, false))
+
+        override fun makeCopyWithoutTags(): Action = copy()
     }
 
     data class GainBlock(
@@ -61,13 +84,18 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
         override val target: ActionTarget,
     ) : Action(value, value, target) {
         constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, false))
+
+        override fun makeCopyWithoutTags(): Action = copy()
     }
 
-    data object RefineStats : Action(0, 0, ActionTarget.None)
-    data object NoAction : Action(0, 0, ActionTarget.None)
+    data object RefineStats : Action(0, 0, ActionTarget.None) {
 
-    companion object {
-        const val TAG_PENDING = "Action.Pending"
+        override fun makeCopyWithoutTags(): Action = RefineStats
+    }
+
+    data object NoAction : Action(0, 0, ActionTarget.None) {
+
+        override fun makeCopyWithoutTags(): Action = NoAction
     }
 }
 
