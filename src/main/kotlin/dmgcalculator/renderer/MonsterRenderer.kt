@@ -20,7 +20,6 @@ import com.megacrit.cardcrawl.powers.watcher.VigorPower
 import com.megacrit.cardcrawl.powers.watcher.WaveOfTheHandPower
 import com.megacrit.cardcrawl.relics.*
 import com.megacrit.cardcrawl.stances.WrathStance
-import dmgcalculator.config.ModConfig
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addDuplicationCardActionIfNeeded
@@ -98,19 +97,19 @@ object MonsterRenderer {
                 }
             }
 
-            if (!worstMonsterInfo.isDead) {
+            if (!bestMonsterInfo.isDead) {
                 val worstEndTurnActionResult =
-                    worstMonsterInfo.getEndTurnIntentActions(aliveMonsterCount, hoveredCard).let {
+                    worstMonsterInfo.getPlayerEndTurnIntentActions(aliveMonsterCount, hoveredCard).let {
                         worstMonsterInfo.takeActions(it, true)
                     }
                 val bestEndTurnActionResult =
-                    bestMonsterInfo.getEndTurnIntentActions(aliveMonsterCount, hoveredCard).let {
+                    bestMonsterInfo.getPlayerEndTurnIntentActions(aliveMonsterCount, hoveredCard).let {
                         bestMonsterInfo.takeActions(it, false)
                     }
                 if (worstEndTurnActionResult != ActionResult.EMPTY || bestEndTurnActionResult != ActionResult.EMPTY) {
                     renderMessages.add(
                         buildString {
-                            append("--End Turn--".colored("#FCBA03"))
+                            append("--Player End Turn--".colored("#FCBA03"))
                             appendLine()
                             append(
                                 buildOutcomeMessage(
@@ -123,34 +122,31 @@ object MonsterRenderer {
                 }
             }
 
-            if (ModConfig.calculatePlayerThornsDamage && !worstMonsterInfo.isDead) {
-                // For player, worst result on monster mean they take minimum of damages
-                val worstThornActionResult = worstMonsterInfo.pendingActions.toList().let {
-                    worstMonsterInfo.takeActions(it, false)
-                }.also {
-                    worstMonsterInfo.pendingActions.clear()
-                }
-                // For player, best result on monster mean they take maximum of damages
-                val bestThornActionResult = bestMonsterInfo.pendingActions.toList().let {
-                    bestMonsterInfo.takeActions(it, true)
-                }.also {
-                    bestMonsterInfo.pendingActions.clear()
-                }
-                if (worstThornActionResult != ActionResult.EMPTY || bestThornActionResult != ActionResult.EMPTY) {
+            if (!bestMonsterInfo.isDead) {
+                val worstFinalActionResult =
+                    worstMonsterInfo.getFinalIntentActions().let {
+                        worstMonsterInfo.takeActions(it, true)
+                    }
+                val bestFinalActionResult =
+                    bestMonsterInfo.getFinalIntentActions().let {
+                        bestMonsterInfo.takeActions(it, false)
+                    }
+                if (worstFinalActionResult != ActionResult.EMPTY || bestFinalActionResult != ActionResult.EMPTY) {
                     renderMessages.add(
                         buildString {
-                            append("--Thorn--".colored("#FCBA03"))
+                            append("--Final--".colored("#FCBA03"))
                             appendLine()
                             append(
                                 buildOutcomeMessage(
-                                    worstOutcomeResult = OutcomeResult(worstMonsterInfo, worstThornActionResult),
-                                    bestOutcomeResult = OutcomeResult(bestMonsterInfo, bestThornActionResult),
+                                    worstOutcomeResult = OutcomeResult(worstMonsterInfo, worstFinalActionResult),
+                                    bestOutcomeResult = OutcomeResult(bestMonsterInfo, bestFinalActionResult),
                                 ),
                             )
                         }
                     )
                 }
             }
+
             this[monster] = renderMessages.joinToString("\n")
         }
     }
@@ -184,7 +180,33 @@ object MonsterRenderer {
         }.orEmpty()
     }
 
-    private fun CreatureInfo<AbstractMonster>.getEndTurnIntentActions(
+    private fun CreatureInfo<AbstractMonster>.getFinalIntentActions(): List<Action> = buildList {
+        // player thorns power damage
+        AbstractDungeon.player.powers.forEach { power ->
+            when {
+                power.ID == ThornsPower.POWER_ID -> {
+                    repeat(creature.getAttackIntentActions().size) {
+                        add(Action.DamageThorns(power.amount))
+                    }
+                }
+            }
+        }
+
+        creature.powers.forEach { power ->
+            when (power.ID) {
+                ConstrictedPower.POWER_ID -> add(Action.DamageThorns(power.amount))
+                RegenerateMonsterPower.POWER_ID -> add(Action.GainHP(power.amount, creature))
+                RegenPower.POWER_ID -> add(Action.GainHP(power.amount, creature))
+            }
+        }
+
+        // pending actions
+        addAll(pendingActions).also {
+            pendingActions.clear()
+        }
+    }
+
+    private fun CreatureInfo<AbstractMonster>.getPlayerEndTurnIntentActions(
         aliveMonsterCount: Int,
         hoveredCard: AbstractCard?,
     ): List<Action> = buildList {
@@ -301,12 +323,6 @@ object MonsterRenderer {
                     ?.let {
                         addToBottom(Action.DamageThorns(it))
                     }
-
-                power.ID == ThornsPower.POWER_ID -> {
-                    repeat(this@getEndTurnIntentActions.creature.getAttackIntentActions().size) {
-                        addToBottom(Action.DamageThorns(power.amount).withPendingTag())
-                    }
-                }
             }
         }
 

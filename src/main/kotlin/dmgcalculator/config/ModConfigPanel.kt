@@ -28,7 +28,7 @@ object ModConfigPanel {
         ModConfig.calculatePlayerThornsDamage = config.getBool(CALCULATE_PLAYER_THORNS_DAMAGE)
         return ModPanel().apply {
             addUIElement(createToggleBlockInfoButton(this))
-            addUIElement(createToggleCalculatePlayerThornsDamageButton(this))
+//            addUIElement(createToggleCalculatePlayerThornsDamageButton(this))
         }
     }
 
