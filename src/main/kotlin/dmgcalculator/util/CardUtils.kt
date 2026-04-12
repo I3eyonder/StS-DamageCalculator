@@ -345,7 +345,10 @@ fun AbstractCard.getChannelingOrbs(): List<AbstractOrb> {
 }
 
 fun AbstractCard.getActionHitCount(): Int = when (cardID) {
-    TwinStrike.ID -> 2
+    DaggerSpray.ID, Dualcast.ID, GlassKnife.ID,
+    TwinStrike.ID, FlyingSleeves.ID,
+        -> 2
+
     RiddleWithHoles.ID -> 5
     Pummel.ID, Tantrum.ID, SwordBoomerang.ID, Ragnarok.ID,
     RipAndTear.ID, Expunger.ID,
@@ -363,7 +366,6 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
 
     Eviscerate.ID -> 3
     FiendFire.ID -> AbstractDungeon.player.hand.size() - 1
-    DaggerSpray.ID -> 2
     ThunderStrike.ID -> {
         AbstractDungeon.actionManager.orbsChanneledThisCombat.count {
             it is Lightning
@@ -376,7 +378,6 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
         }
     }
 
-    Dualcast.ID -> 2
     Barrage.ID -> {
         AbstractDungeon.player.orbs.count {
             it !is EmptyOrbSlot
