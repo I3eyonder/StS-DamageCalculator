@@ -41,7 +41,9 @@ object PlayerRenderer {
             createRenderMessage(hoveredCard)
         } else cachedMsg.ifEmpty {
             createRenderMessage().also {
-                cachedMsg = it
+                cachedMsg = it.ifEmpty {
+                    " "
+                }
             }
         }
 
