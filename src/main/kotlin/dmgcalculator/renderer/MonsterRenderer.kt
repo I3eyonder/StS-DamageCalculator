@@ -546,7 +546,7 @@ object MonsterRenderer {
         when (orbsToEvoke.ID) {
             Lightning.ORB_ID -> {
                 val damageAmount = orbsToEvoke.evokeAmount.times(orbDamageMultiplier).toInt()
-                if (AbstractDungeon.player.hasPower(ElectroPower.POWER_ID)) {
+                if (AbstractDungeon.player.hasPower(ElectroPower.POWER_ID) || aliveMonsterCount == 1) {
                     add(Action.DamageThorns(damageAmount))
                 } else {
                     add(Action.DamageThorns(0, damageAmount, ActionTarget.Random))
