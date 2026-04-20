@@ -24,14 +24,18 @@ import dmgcalculator.entities.*
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addDuplicationCardActionIfNeeded
 import dmgcalculator.util.Utils.addToBottom
+import dmgcalculator.util.Utils.getEvokedOrbsWhenExceededMax
+import dmgcalculator.util.Utils.getRetainedOrbsWhenExceededMax
 import dmgcalculator.util.Utils.replacesWith
 import dmgcalculator.util.Utils.toSimpleCardInfoList
 
 object MonsterRenderer {
 
     private val cachedMsg = mutableMapOf<AbstractMonster, String>()
+    private var isPlayerTurn = false
 
     fun render(sb: SpriteBatch, hoveredCard: AbstractCard?, isPlayerTurn: Boolean) {
+        this.isPlayerTurn = isPlayerTurn
         val aliveMonstersIndexed = AbstractDungeon.getMonsters().aliveMonstersIndexed
         val hoveredMonster = AbstractDungeon.player.getHoveredMonster()
         val aliveMonsterCount = aliveMonstersIndexed.size
@@ -273,50 +277,37 @@ object MonsterRenderer {
         }
 
         // player orbs damage
-        val playerOrbs = AbstractDungeon.player.orbs.plus(hoveredCard?.getChannelingOrbs().orEmpty()).filterNot {
-            it is EmptyOrbSlot
-        }.takeLast(AbstractDungeon.player.maxOrbs).let {
-            if (hoveredCard?.isOrbEvokeCard == true) {
-                it.drop(1)
-            } else {
-                it
-            }
-        }
         val orbDamageMultiplier = if (creature.hasPower(LockOnPower.POWER_ID)) 1.5f else 1f
-        playerOrbs.forEach { orb ->
-            when (orb.ID) {
-                Lightning.ORB_ID -> {
-                    val damageAmount = orb.passiveAmount.times(orbDamageMultiplier).toInt()
-                    if (AbstractDungeon.player.hasPower(ElectroPower.POWER_ID) || aliveMonsterCount == 1) {
-                        addToBottom(Action.DamageThorns(damageAmount))
-                    } else {
-                        addToBottom(Action.DamageThorns(0, damageAmount, ActionTarget.Random))
-                    }
-                }
-
-                Frost.ORB_ID -> {
-                    if (AbstractDungeon.player.hasPower(JuggernautPower.POWER_ID)) {
-                        val juggernautPower = AbstractDungeon.player.getPower(JuggernautPower.POWER_ID)
-                        if (aliveMonsterCount > 1) {
-                            add(
-                                Action.DamageThorns(
-                                    0,
-                                    juggernautPower.amount,
-                                    ActionTarget.Random,
-                                )
-                            )
-                        } else {
-                            add(
-                                Action.DamageThorns(
-                                    juggernautPower.amount,
-                                    ActionTarget.All,
-                                )
-                            )
-                        }
-                    }
+        val accumulatePlayerOrbs = AbstractDungeon.player.orbs
+            .plus(hoveredCard?.getChannelingOrbs().orEmpty())
+            .filterNot {
+                it is EmptyOrbSlot
+            }
+            .let {
+                if (AbstractDungeon.player.hasRelic(FrozenCore.ID) &&
+                    it.size < AbstractDungeon.player.maxOrbs &&
+                    isPlayerTurn
+                ) {
+                    it.plus(Frost())
+                } else {
+                    it
                 }
             }
-        }
+        // Retained orbs
+        accumulatePlayerOrbs.getRetainedOrbsWhenExceededMax()
+            .let { retainedOrbs ->
+                if (hoveredCard?.isOrbEvokeCard == true) {
+                    retainedOrbs.drop(hoveredCard.getOrbEvokeCount(retainedOrbs.size))
+                } else {
+                    retainedOrbs
+                }
+            }
+            .forEachIndexed { orbIndex, retainOrb ->
+                addOrbDamageAction(retainOrb, orbDamageMultiplier, false, creature, aliveMonsterCount)
+                if (AbstractDungeon.player.hasRelic(GoldPlatedCables.ID) && orbIndex == 0) {
+                    addOrbDamageAction(retainOrb, orbDamageMultiplier, false, creature, aliveMonsterCount)
+                }
+            }
 
         // player powers damage
         AbstractDungeon.player.powers.forEach { power ->
@@ -537,15 +528,20 @@ object MonsterRenderer {
         return actions.flatten()
     }
 
-    private fun MutableList<Action>.addOrbEvokeAction(
-        orbsToEvoke: AbstractOrb,
+    private fun MutableList<Action>.addOrbDamageAction(
+        orb: AbstractOrb,
         orbDamageMultiplier: Float,
+        isEvoke: Boolean,
         monster: AbstractMonster,
         aliveMonsterCount: Int,
     ) {
-        when (orbsToEvoke.ID) {
+        when (orb.ID) {
             Lightning.ORB_ID -> {
-                val damageAmount = orbsToEvoke.evokeAmount.times(orbDamageMultiplier).toInt()
+                val damageAmount = if (isEvoke) {
+                    orb.evokeAmount
+                } else {
+                    orb.passiveAmount
+                }.times(orbDamageMultiplier).toInt()
                 if (AbstractDungeon.player.hasPower(ElectroPower.POWER_ID) || aliveMonsterCount == 1) {
                     add(Action.DamageThorns(damageAmount))
                 } else {
@@ -576,11 +572,13 @@ object MonsterRenderer {
             }
 
             Dark.ORB_ID -> {
-                val lowestHPMonster = AbstractDungeon.getMonsters().aliveMonsters.minBy {
-                    it.currentHealth
+                if (isEvoke) {
+                    val lowestHPMonster = AbstractDungeon.getMonsters().aliveMonsters.minBy {
+                        it.currentHealth
+                    }
+                    val damageAmount = orb.evokeAmount.times(orbDamageMultiplier).toInt()
+                    add(Action.DamageThorns(damageAmount, ActionTarget.Single(lowestHPMonster)))
                 }
-                val damageAmount = orbsToEvoke.evokeAmount.times(orbDamageMultiplier).toInt()
-                add(Action.DamageThorns(damageAmount, ActionTarget.Single(lowestHPMonster)))
             }
         }
     }
@@ -715,16 +713,26 @@ object MonsterRenderer {
                 }
 
                 // Evoke orbs if needed
-                AbstractDungeon.player.orbs.plus(getChannelingOrbs()).filterNot {
-                    it is EmptyOrbSlot
-                }.dropLast(AbstractDungeon.player.maxOrbs)
-                    .forEach { evokedOrb ->
-                        addOrbEvokeAction(evokedOrb, orbDamageMultiplier, monster, aliveMonsterCount)
+                val accumulatePlayerOrbs = AbstractDungeon.player.orbs
+                    .plus(getChannelingOrbs())
+                    .filterNot {
+                        it is EmptyOrbSlot
                     }
+                // Evoked orbs due to exceeded max
+                accumulatePlayerOrbs.getEvokedOrbsWhenExceededMax().forEach { evokedOrb ->
+                    addOrbDamageAction(evokedOrb, orbDamageMultiplier, true, monster, aliveMonsterCount)
+                }
                 if (isOrbEvokeCard) {
-                    AbstractDungeon.player.orbs.firstOrNull()?.let { orbsToEvoke ->
-                        addOrbEvokeAction(orbsToEvoke, orbDamageMultiplier, monster, aliveMonsterCount)
-                    }
+                    // Evoke orbs from retained orbs
+                    accumulatePlayerOrbs.getRetainedOrbsWhenExceededMax()
+                        .let { retainedOrbs ->
+                            retainedOrbs.take(getOrbEvokeCount(retainedOrbs.size))
+                        }
+                        .forEach { evokingOrb ->
+                            repeat(getEvokeHitCount()) {
+                                addOrbDamageAction(evokingOrb, orbDamageMultiplier, true, monster, aliveMonsterCount)
+                            }
+                        }
                 }
 
                 // Apply poison if needed

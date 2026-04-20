@@ -4,6 +4,7 @@ import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.AbstractCard.CardType
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster.Intent
+import com.megacrit.cardcrawl.orbs.AbstractOrb
 import com.megacrit.cardcrawl.powers.BurstPower
 import com.megacrit.cardcrawl.powers.DoubleTapPower
 import com.megacrit.cardcrawl.powers.DuplicationPower
@@ -11,7 +12,6 @@ import com.megacrit.cardcrawl.powers.EchoPower
 import com.megacrit.cardcrawl.relics.Necronomicon
 import dmgcalculator.entities.Action
 import dmgcalculator.entities.SimpleCardInfo
-import dmgcalculator.entities.asGroupedAction
 import kotlin.math.min
 
 object Utils {
@@ -104,4 +104,8 @@ object Utils {
             }
         }
     }
+
+    fun List<AbstractOrb>.getEvokedOrbsWhenExceededMax() = dropLast(AbstractDungeon.player.maxOrbs)
+
+    fun List<AbstractOrb>.getRetainedOrbsWhenExceededMax() = takeLast(AbstractDungeon.player.maxOrbs)
 }

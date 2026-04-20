@@ -16,6 +16,7 @@ import com.megacrit.cardcrawl.cards.red.Offering
 import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
+import com.megacrit.cardcrawl.orbs.AbstractOrb
 import com.megacrit.cardcrawl.orbs.EmptyOrbSlot
 import com.megacrit.cardcrawl.orbs.Frost
 import com.megacrit.cardcrawl.powers.*
@@ -28,14 +29,18 @@ import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addDuplicationCardActionIfNeeded
 import dmgcalculator.util.Utils.addToBottom
 import dmgcalculator.util.Utils.addToTop
+import dmgcalculator.util.Utils.getEvokedOrbsWhenExceededMax
+import dmgcalculator.util.Utils.getRetainedOrbsWhenExceededMax
 import dmgcalculator.util.Utils.replacesWith
 import dmgcalculator.util.Utils.toSimpleCardInfoList
 
 object PlayerRenderer {
 
     private var cachedMsg = ""
+    private var isPlayerTurn = false
 
     fun render(sb: SpriteBatch, hoveredCard: AbstractCard?, isPlayerTurn: Boolean) {
+        this.isPlayerTurn = isPlayerTurn
         val msg = if (isPlayerTurn) {
             cachedMsg = ""
             createRenderMessage(hoveredCard)
@@ -202,6 +207,40 @@ object PlayerRenderer {
         if (type == CardType.POWER && AbstractDungeon.player.hasRelic(BirdFacedUrn.ID)) {
             add(Action.GainHP(2, AbstractDungeon.player))
         }
+
+        // Evoke orbs if needed
+        val accumulatePlayerOrbs = AbstractDungeon.player.orbs
+            .plus(getChannelingOrbs())
+            .filterNot {
+                it is EmptyOrbSlot
+            }
+        // Evoked orbs due to exceeded max
+        accumulatePlayerOrbs.getEvokedOrbsWhenExceededMax().forEach { evokedOrb ->
+            addOrbAction(evokedOrb, true)
+        }
+        if (isOrbEvokeCard) {
+            // Evoke orbs from retained orbs
+            accumulatePlayerOrbs.getRetainedOrbsWhenExceededMax()
+                .let { retainedOrbs ->
+                    retainedOrbs.take(getOrbEvokeCount(retainedOrbs.size))
+                }
+                .forEach { evokingOrb ->
+                    repeat(getEvokeHitCount()) {
+                        addOrbAction(evokingOrb, true)
+                    }
+                }
+        }
+    }
+
+    private fun MutableList<Action>.addOrbAction(orb: AbstractOrb, isEvoke: Boolean) {
+        if (orb.ID == Frost.ORB_ID) {
+            val blockAmount = if (isEvoke) {
+                orb.evokeAmount
+            } else {
+                orb.passiveAmount
+            }
+            addToBottom(Action.GainBlock(blockAmount, AbstractDungeon.player))
+        }
     }
 
     private fun getCardIntentActions(hoveredCard: AbstractCard? = null): Pair<List<Action>, List<AbstractCard>> {
@@ -275,7 +314,7 @@ object PlayerRenderer {
         hoveredCard: AbstractCard? = null,
         remainingHandCards: List<AbstractCard>,
     ): List<Action> {
-        val player = AbstractDungeon.player
+        val player = creatureInfo.creature
         // Resolve relics
         val relicEffect = buildList {
             player.relics.forEach { relic ->
@@ -331,22 +370,36 @@ object PlayerRenderer {
 
         // Resolve orbs actions
         val orbsActions = buildList {
-            val accumulateOrbs = player.orbs
+            val accumulateOrbs = creatureInfo.creature.orbs
                 .plus(hoveredCard?.getChannelingOrbs().orEmpty())
                 .filterNot {
                     it is EmptyOrbSlot
                 }
-            accumulateOrbs.dropLast(player.maxOrbs).forEach { evokedOrb ->
-                if (evokedOrb.ID == Frost.ORB_ID) {
-                    addToBottom(Action.GainBlock(evokedOrb.evokeAmount, player))
+                .let {
+                    if (player.hasRelic(FrozenCore.ID) &&
+                        it.size < creatureInfo.creature.maxOrbs &&
+                        isPlayerTurn
+                    ) {
+                        it.plus(Frost())
+                    } else {
+                        it
+                    }
                 }
-
-            }
-            accumulateOrbs.takeLast(player.maxOrbs).forEach { retainOrb ->
-                if (retainOrb.ID == Frost.ORB_ID) {
-                    addToBottom(Action.GainBlock(retainOrb.passiveAmount, player))
+            // Retained orbs
+            accumulateOrbs.getRetainedOrbsWhenExceededMax()
+                .let { retainedOrbs ->
+                    if (hoveredCard?.isOrbEvokeCard == true) {
+                        retainedOrbs.drop(hoveredCard.getOrbEvokeCount(retainedOrbs.size))
+                    } else {
+                        retainedOrbs
+                    }
                 }
-            }
+                .forEachIndexed { orbIndex, retainOrb ->
+                    addOrbAction(retainOrb, false)
+                    if (player.hasRelic(GoldPlatedCables.ID) && orbIndex == 0) {
+                        addOrbAction(retainOrb, false)
+                    }
+                }
         }
 
         // Resolve power effects after hand

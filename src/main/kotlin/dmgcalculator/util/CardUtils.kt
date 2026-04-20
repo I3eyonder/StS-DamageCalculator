@@ -112,6 +112,7 @@ private val orbChannelCards = listOf(
     Electrodynamics.ID,
     MeteorStrike.ID,
     Rainbow.ID,
+    Recursion.ID,
 )
 
 private val givePoisonCards = listOf(
@@ -333,6 +334,14 @@ fun AbstractCard.getChannelingOrbs(): List<AbstractOrb> {
             )
         }
 
+        Recursion.ID -> {
+            if (AbstractDungeon.player.hasOrb()) {
+                AbstractDungeon.player.orbs.take(1)
+            } else {
+                emptyList()
+            }
+        }
+
         else -> emptyList()
     } + if (type == CardType.POWER && AbstractDungeon.player.hasPower(StormPower.POWER_ID)) {
         val stormPower = AbstractDungeon.player.getPower(StormPower.POWER_ID)
@@ -344,9 +353,34 @@ fun AbstractCard.getChannelingOrbs(): List<AbstractOrb> {
     }
 }
 
+fun AbstractCard.getOrbEvokeCount(currentOrbCount: Int): Int = when {
+    cardID == Fission.ID -> {
+        if (upgraded) {
+            currentOrbCount
+        } else {
+            0
+        }
+    }
+
+    isOrbEvokeCard -> 1
+    else -> 0
+}
+
+fun AbstractCard.getEvokeHitCount(): Int = when {
+    cardID == Dualcast.ID -> 2
+    cardID == MultiCast.ID -> {
+        var hits = EnergyPanel.totalCount
+        if (AbstractDungeon.player.hasRelic(ChemicalX.ID)) {
+            hits += 2
+        }
+        hits
+    }
+    isOrbEvokeCard -> 1
+    else -> 0
+}
+
 fun AbstractCard.getActionHitCount(): Int = when (cardID) {
-    DaggerSpray.ID, Dualcast.ID, GlassKnife.ID,
-    TwinStrike.ID, FlyingSleeves.ID,
+    DaggerSpray.ID, GlassKnife.ID, TwinStrike.ID, FlyingSleeves.ID,
         -> 2
 
     RiddleWithHoles.ID -> 5
@@ -355,7 +389,7 @@ fun AbstractCard.getActionHitCount(): Int = when (cardID) {
         -> magicNumber
 
     Whirlwind.ID, Skewer.ID, ReinforcedBody.ID,
-    Tempest.ID, Transmutation.ID, MultiCast.ID,
+    Tempest.ID, Transmutation.ID,
         -> {
         var hits = EnergyPanel.totalCount
         if (AbstractDungeon.player.hasRelic(ChemicalX.ID)) {
