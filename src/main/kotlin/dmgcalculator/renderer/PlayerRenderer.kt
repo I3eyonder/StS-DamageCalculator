@@ -160,6 +160,14 @@ object PlayerRenderer {
                     )
                 }
             }
+            monster.getPower(BeatOfDeathPower.POWER_ID)?.let { beatOfDeathPower ->
+                add(
+                    Action.DamageThorns(
+                        beatOfDeathPower.amount,
+                        ActionTarget.Single(AbstractDungeon.player, false),
+                    )
+                )
+            }
         }
 
         AbstractDungeon.player.getPower(RagePower.POWER_ID)?.let { ragePower ->
