@@ -6,6 +6,7 @@ import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.monsters.beyond.Nemesis
+import com.megacrit.cardcrawl.potions.FairyPotion
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.relics.*
 import dmgcalculator.util.Utils.addToTop
@@ -19,6 +20,20 @@ data class CreatureInfo<T : AbstractCreature>(
     val powersAmount: MutableMap<String, Int> = creature.powers.associate {
         it.ID to it.amount
     }.toMutableMap(),
+    val resurrectionAbilities: MutableMap<Any, Boolean> = mutableMapOf<Any, Boolean>().apply {
+        if (creature is AbstractPlayer) {
+            creature.potions.forEach { potion ->
+                if (potion.ID == FairyPotion.POTION_ID) {
+                    this[potion] = true
+                }
+            }
+            creature.getRelic(LizardTail.ID)?.let { lizardTailRelic ->
+                if (lizardTailRelic.counter == -1) {
+                    this[lizardTailRelic] = true
+                }
+            }
+        }
+    },
 ) {
 
     private val refineActions = mutableListOf<Action>()
@@ -209,6 +224,9 @@ data class CreatureInfo<T : AbstractCreature>(
                 }
 
                 remainHP = (remainHP - damage).coerceAtLeast(0)
+                if (isDead) {
+                    tryResurrection()
+                }
                 if (action !is Action.LoseHP) {
                     ActionResult(
                         takenDamage = damage,
@@ -224,6 +242,30 @@ data class CreatureInfo<T : AbstractCreature>(
 
             else -> {
                 ActionResult.EMPTY
+            }
+        }
+    }
+
+    private fun tryResurrection() {
+        resurrectionAbilities.toMap().forEach { (o, isActive) ->
+            if (isActive) {
+                val healAmt = when (o) {
+                    is FairyPotion -> {
+                        val percent = o.potency.toFloat() / 100.0f
+                        (creature.maxHealth * percent).toInt().coerceAtLeast(1)
+                    }
+
+                    is LizardTail -> {
+                        (creature.maxHealth / 2).coerceAtLeast(1)
+                    }
+
+                    else -> 0
+                }
+                if (healAmt > 0) {
+                    remainHP = remainHP.plus(healAmt).coerceAtMost(creature.maxHealth)
+                    resurrectionAbilities[o] = false
+                    return
+                }
             }
         }
     }

@@ -78,9 +78,11 @@ object MonsterRenderer {
             )
             val worstMonsterInfo = initialMonsterInfo.copy(
                 powersAmount = initialMonsterInfo.powersAmount.toMutableMap(),
+                resurrectionAbilities = initialMonsterInfo.resurrectionAbilities.toMutableMap(),
             )
             val bestMonsterInfo = initialMonsterInfo.copy(
                 powersAmount = initialMonsterInfo.powersAmount.toMutableMap(),
+                resurrectionAbilities = initialMonsterInfo.resurrectionAbilities.toMutableMap(),
             )
             if (cardIntentActions.isNotEmpty()) {
                 val worstCardActionResult = worstMonsterInfo.takeActions(cardIntentActions, true)

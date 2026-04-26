@@ -67,9 +67,11 @@ object PlayerRenderer {
         val (cardActions, remainingHandCards) = getCardIntentActions(hoveredCard)
         val worstPlayerInfo = initialPlayerInfo.copy(
             powersAmount = initialPlayerInfo.powersAmount.toMutableMap(),
+            resurrectionAbilities = initialPlayerInfo.resurrectionAbilities.toMutableMap(),
         )
         val bestPlayerInfo = initialPlayerInfo.copy(
             powersAmount = initialPlayerInfo.powersAmount.toMutableMap(),
+            resurrectionAbilities = initialPlayerInfo.resurrectionAbilities.toMutableMap(),
         )
 
         // Card actions
