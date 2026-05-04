@@ -8,6 +8,7 @@ import com.megacrit.cardcrawl.cards.green.Bane
 import com.megacrit.cardcrawl.cards.green.BouncingFlask
 import com.megacrit.cardcrawl.cards.purple.CrushJoints
 import com.megacrit.cardcrawl.cards.purple.Indignation
+import com.megacrit.cardcrawl.cards.purple.Judgement
 import com.megacrit.cardcrawl.cards.purple.PressurePoints
 import com.megacrit.cardcrawl.cards.purple.SashWhip
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
@@ -613,6 +614,11 @@ object MonsterRenderer {
                             add(Action.DamageNormal(damagePerHit, monster))
                         }
                     }
+                }
+
+                // Apply Judgment
+                if (cardID == Judgement.ID && monster.currentHealth <= magicNumber) {
+                    add(Action.LoseHP(monster.currentHealth, monster, true))
                 }
 
                 // Apply MarkPower if needed
