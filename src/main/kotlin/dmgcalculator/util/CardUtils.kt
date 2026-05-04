@@ -22,14 +22,14 @@ import com.megacrit.cardcrawl.ui.panels.EnergyPanel
 import dmgcalculator.entities.ExhaustInfo
 import dmgcalculator.entities.SimpleCardInfo
 
-private val randomAttackCards = listOf(
+private val randomAttackCards = setOf(
     SwordBoomerang.ID,
     Ragnarok.ID,
     RipAndTear.ID,
     ThunderStrike.ID,
 )
 
-private val damageAllEnemiesCards = listOf(
+private val damageAllEnemiesCards = setOf(
     Cleave.ID,
     ThunderClap.ID,
     Whirlwind.ID,
@@ -48,7 +48,7 @@ private val damageAllEnemiesCards = listOf(
     DramaticEntrance.ID,
 )
 
-private val giveVulnerableCards = listOf(
+private val giveVulnerableCards = setOf(
     Bash.ID,
     ThunderClap.ID,
     Shockwave.ID,
@@ -59,7 +59,7 @@ private val giveVulnerableCards = listOf(
     Indignation.ID,
 )
 
-private val applyDebuffCards = listOf(
+private val applyDebuffCards = setOf(
     Blind.ID,
     DarkShackles.ID,
     Trip.ID,
@@ -91,13 +91,13 @@ private val applyDebuffCards = listOf(
     Indignation.ID,
 )
 
-private val orbEvokeCards = listOf(
+private val orbEvokeCards = setOf(
     Dualcast.ID,
     MultiCast.ID,
     Recursion.ID,
 )
 
-private val orbChannelCards = listOf(
+private val orbChannelCards = setOf(
     Zap.ID,
     BallLightning.ID,
     ColdSnap.ID,
@@ -115,7 +115,7 @@ private val orbChannelCards = listOf(
     Recursion.ID,
 )
 
-private val givePoisonCards = listOf(
+private val givePoisonCards = setOf(
     DeadlyPoison.ID,
     PoisonedStab.ID,
     Catalyst.ID,
@@ -124,7 +124,7 @@ private val givePoisonCards = listOf(
     BouncingFlask.ID,
 )
 
-private val fakeGainBlockCards = listOf(
+private val fakeGainBlockCards = setOf(
     RitualDagger.ID,
 )
 

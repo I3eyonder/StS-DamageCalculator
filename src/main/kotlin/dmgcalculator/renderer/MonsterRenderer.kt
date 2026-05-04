@@ -620,7 +620,9 @@ object MonsterRenderer {
                     monsterInfo.powersAmount[MarkPower.POWER_ID]?.let { markAmount ->
                         add(Action.LoseHP(markAmount, monster))
                     }
-                    add(Action.LoseHP(magicNumber, monster, true))
+                    monsterInfo.ifDebuffApplied {
+                        add(Action.LoseHP(magicNumber, monster, true))
+                    }
                 }
 
                 // Apply player's Juggernaut power if needed
