@@ -9,6 +9,7 @@ import com.megacrit.cardcrawl.cards.colorless.JAX
 import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Pain
 import com.megacrit.cardcrawl.cards.curses.Regret
+import com.megacrit.cardcrawl.cards.purple.Halt
 import com.megacrit.cardcrawl.cards.red.Bloodletting
 import com.megacrit.cardcrawl.cards.red.Entrench
 import com.megacrit.cardcrawl.cards.red.Hemokinesis
@@ -24,6 +25,7 @@ import com.megacrit.cardcrawl.powers.watcher.BlockReturnPower
 import com.megacrit.cardcrawl.powers.watcher.LikeWaterPower
 import com.megacrit.cardcrawl.relics.*
 import com.megacrit.cardcrawl.stances.CalmStance
+import com.megacrit.cardcrawl.stances.WrathStance
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addDuplicationCardActionIfNeeded
@@ -126,6 +128,9 @@ object PlayerRenderer {
         repeat(getActionHitCount()) {
             if (block > 0 && baseBlock >= 0 && !isFakeGainBlockCard) {
                 add(Action.GainBlock(block, AbstractDungeon.player))
+            }
+            if (cardID == Halt.ID && AbstractDungeon.player.stance.ID == WrathStance.STANCE_ID) {
+                add(Action.GainBlock(magicNumber, AbstractDungeon.player))
             }
             val targetingMonsters = if (isDamageAllEnemiesCard) {
                 AbstractDungeon.getMonsters().aliveMonsters
