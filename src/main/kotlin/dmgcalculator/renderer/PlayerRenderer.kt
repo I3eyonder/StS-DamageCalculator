@@ -10,6 +10,7 @@ import com.megacrit.cardcrawl.cards.curses.Decay
 import com.megacrit.cardcrawl.cards.curses.Pain
 import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.purple.Halt
+import com.megacrit.cardcrawl.cards.purple.SpiritShield
 import com.megacrit.cardcrawl.cards.red.Bloodletting
 import com.megacrit.cardcrawl.cards.red.Entrench
 import com.megacrit.cardcrawl.cards.red.Hemokinesis
@@ -126,8 +127,14 @@ object PlayerRenderer {
 
     private fun AbstractCard.createIntentActions(): List<Action> = buildList {
         repeat(getActionHitCount()) {
-            if (block > 0 && baseBlock >= 0 && !isFakeGainBlockCard) {
-                add(Action.GainBlock(block, AbstractDungeon.player))
+            var blockAmount = block
+            var baseBlockAmount = baseBlock
+            if (cardID == SpiritShield.ID) {
+                blockAmount -= magicNumber
+                baseBlockAmount -= magicNumber
+            }
+            if (blockAmount > 0 && baseBlockAmount >= 0 && !isFakeGainBlockCard) {
+                add(Action.GainBlock(blockAmount, AbstractDungeon.player))
             }
             if (cardID == Halt.ID && AbstractDungeon.player.stance.ID == WrathStance.STANCE_ID) {
                 add(Action.GainBlock(magicNumber, AbstractDungeon.player))
