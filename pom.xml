@@ -27,7 +27,7 @@
 
     <!-- This information will be displayed in ModTheSpire, the modded launcher. -->
     <name>Damage Calculator</name>
-    <version>1.1.8</version>
+    <version>1.1.9</version>
     <!-- Avoid using \ in this description, as they can cause the description to fail to load. -->
     <!-- If you really want to use them, you'll need to "escape" them by putting another one in front, like \\ -->
     <description>Calculate output damages of a card for each enemy and next turn's incoming damage</description>
