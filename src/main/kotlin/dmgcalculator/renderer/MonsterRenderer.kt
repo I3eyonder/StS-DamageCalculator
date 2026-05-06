@@ -16,6 +16,7 @@ import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.orbs.*
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.MarkPower
+import com.megacrit.cardcrawl.powers.watcher.NirvanaPower
 import com.megacrit.cardcrawl.powers.watcher.OmegaPower
 import com.megacrit.cardcrawl.powers.watcher.VigorPower
 import com.megacrit.cardcrawl.powers.watcher.WaveOfTheHandPower
@@ -633,7 +634,7 @@ object MonsterRenderer {
 
                 // Apply player's Juggernaut power if needed
                 AbstractDungeon.player.getPower(JuggernautPower.POWER_ID)?.let { juggernautPower ->
-                    if (type == CardType.ATTACK && AbstractDungeon.player.hasPower(RagePower.POWER_ID)) {
+                    fun MutableList<Action>.addJuggernautAction() {
                         if (aliveMonsterCount > 1) {
                             add(
                                 Action.DamageThorns(
@@ -650,42 +651,19 @@ object MonsterRenderer {
                                 )
                             )
                         }
+                    }
+
+                    if (type == CardType.ATTACK && AbstractDungeon.player.hasPower(RagePower.POWER_ID)) {
+                        addJuggernautAction()
                     }
                     if (AbstractDungeon.player.hasPower(AfterImagePower.POWER_ID)) {
-                        if (aliveMonsterCount > 1) {
-                            add(
-                                Action.DamageThorns(
-                                    0,
-                                    juggernautPower.amount,
-                                    ActionTarget.Random
-                                )
-                            )
-                        } else {
-                            add(
-                                Action.DamageThorns(
-                                    juggernautPower.amount,
-                                    ActionTarget.Single(monster)
-                                )
-                            )
-                        }
+                        addJuggernautAction()
+                    }
+                    if (isScryCard && AbstractDungeon.player.hasPower(NirvanaPower.POWER_ID)) {
+                        addJuggernautAction()
                     }
                     if (block > 0 && baseBlock >= 0 && !isFakeGainBlockCard) {
-                        if (aliveMonsterCount > 1) {
-                            add(
-                                Action.DamageThorns(
-                                    0,
-                                    juggernautPower.amount,
-                                    ActionTarget.Random
-                                )
-                            )
-                        } else {
-                            add(
-                                Action.DamageThorns(
-                                    juggernautPower.amount,
-                                    ActionTarget.Single(monster)
-                                )
-                            )
-                        }
+                        addJuggernautAction()
                     }
                 }
 

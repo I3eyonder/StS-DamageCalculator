@@ -128,6 +128,12 @@ private val fakeGainBlockCards = setOf(
     RitualDagger.ID,
 )
 
+private val scryCards = setOf(
+    CutThroughFate.ID,
+    JustLucky.ID,
+    ThirdEye.ID,
+)
+
 val AbstractCard.isOrbChannelCard: Boolean
     get() = orbChannelCards.contains(cardID)
 
@@ -154,6 +160,9 @@ val AbstractCard.canGivePoison: Boolean
 
 val AbstractCard.isFakeGainBlockCard: Boolean
     get() = fakeGainBlockCards.contains(cardID)
+
+val AbstractCard.isScryCard: Boolean
+    get() = scryCards.contains(cardID)
 
 fun AbstractCard.getDebuffInstanceCount(): Int = when {
     cardID == Shockwave.ID -> 2

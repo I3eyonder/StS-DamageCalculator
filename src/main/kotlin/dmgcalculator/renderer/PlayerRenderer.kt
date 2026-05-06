@@ -24,6 +24,7 @@ import com.megacrit.cardcrawl.orbs.Frost
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.BlockReturnPower
 import com.megacrit.cardcrawl.powers.watcher.LikeWaterPower
+import com.megacrit.cardcrawl.powers.watcher.NirvanaPower
 import com.megacrit.cardcrawl.relics.*
 import com.megacrit.cardcrawl.stances.CalmStance
 import com.megacrit.cardcrawl.stances.WrathStance
@@ -191,6 +192,11 @@ object PlayerRenderer {
         }
         AbstractDungeon.player.getPower(AfterImagePower.POWER_ID)?.let { afterImagePower ->
             add(Action.GainBlock(afterImagePower.amount, AbstractDungeon.player))
+        }
+        AbstractDungeon.player.getPower(NirvanaPower.POWER_ID)?.let { nirvanaPower ->
+            if (isScryCard) {
+                add(Action.GainBlock(nirvanaPower.amount, AbstractDungeon.player))
+            }
         }
 
         // Healing or Losing HP effects
