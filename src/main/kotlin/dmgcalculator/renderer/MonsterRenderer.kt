@@ -16,6 +16,7 @@ import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.orbs.*
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.MarkPower
+import com.megacrit.cardcrawl.powers.watcher.MentalFortressPower
 import com.megacrit.cardcrawl.powers.watcher.NirvanaPower
 import com.megacrit.cardcrawl.powers.watcher.OmegaPower
 import com.megacrit.cardcrawl.powers.watcher.VigorPower
@@ -660,6 +661,9 @@ object MonsterRenderer {
                         addJuggernautAction()
                     }
                     if (isScryCard && AbstractDungeon.player.hasPower(NirvanaPower.POWER_ID)) {
+                        addJuggernautAction()
+                    }
+                    if (causeSwitchStance() && AbstractDungeon.player.hasPower(MentalFortressPower.POWER_ID)) {
                         addJuggernautAction()
                     }
                     if (block > 0 && baseBlock >= 0 && !isFakeGainBlockCard) {

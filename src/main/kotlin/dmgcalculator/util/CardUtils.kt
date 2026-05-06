@@ -15,12 +15,18 @@ import com.megacrit.cardcrawl.powers.CorruptionPower
 import com.megacrit.cardcrawl.powers.DarkEmbracePower
 import com.megacrit.cardcrawl.powers.PoisonPower
 import com.megacrit.cardcrawl.powers.StormPower
+import com.megacrit.cardcrawl.powers.watcher.MantraPower
 import com.megacrit.cardcrawl.relics.BlueCandle
 import com.megacrit.cardcrawl.relics.ChemicalX
 import com.megacrit.cardcrawl.relics.MedicalKit
+import com.megacrit.cardcrawl.stances.CalmStance
+import com.megacrit.cardcrawl.stances.DivinityStance
+import com.megacrit.cardcrawl.stances.NeutralStance
+import com.megacrit.cardcrawl.stances.WrathStance
 import com.megacrit.cardcrawl.ui.panels.EnergyPanel
 import dmgcalculator.entities.ExhaustInfo
 import dmgcalculator.entities.SimpleCardInfo
+import dmgcalculator.util.Utils.isAttackingIntent
 
 private val randomAttackCards = setOf(
     SwordBoomerang.ID,
@@ -163,6 +169,60 @@ val AbstractCard.isFakeGainBlockCard: Boolean
 
 val AbstractCard.isScryCard: Boolean
     get() = scryCards.contains(cardID)
+
+fun AbstractCard.causeSwitchStance(): Boolean = when (cardID) {
+    Eruption.ID, Crescendo.ID, Tantrum.ID -> {
+        AbstractDungeon.player.stance.ID != WrathStance.STANCE_ID
+    }
+
+    Vigilance.ID, Tranquility.ID, InnerPeace.ID, Meditate.ID -> {
+        AbstractDungeon.player.stance.ID != CalmStance.STANCE_ID
+    }
+
+    FearNoEvil.ID -> {
+        val hoveredMonster = AbstractDungeon.player.getHoveredMonster()
+        val aliveMonsters = AbstractDungeon.getMonsters().aliveMonsters
+        when {
+            hoveredMonster != null -> {
+                AbstractDungeon.player.stance.ID != CalmStance.STANCE_ID &&
+                        hoveredMonster.intent.isAttackingIntent
+            }
+
+            aliveMonsters.size == 1 -> {
+                AbstractDungeon.player.stance.ID != CalmStance.STANCE_ID &&
+                        aliveMonsters.first().intent.isAttackingIntent
+            }
+
+            else -> {
+                false
+            }
+        }
+    }
+
+    EmptyBody.ID, EmptyFist.ID, EmptyMind.ID -> {
+        AbstractDungeon.player.stance.ID != NeutralStance.STANCE_ID
+    }
+
+    Blasphemy.ID -> {
+        AbstractDungeon.player.stance.ID != DivinityStance.STANCE_ID
+    }
+
+    Prostrate.ID -> {
+        val mantraAmount = AbstractDungeon.player.getPower(MantraPower.POWER_ID)?.amount ?: 0
+        AbstractDungeon.player.stance.ID != DivinityStance.STANCE_ID &&
+                getMantraAmount().plus(mantraAmount) >= 10
+    }
+
+    else -> false
+}
+
+fun AbstractCard.getMantraAmount(): Int = when (cardID) {
+    Prostrate.ID, Pray.ID,
+    Worship.ID,
+        -> magicNumber
+
+    else -> 0
+}
 
 fun AbstractCard.getDebuffInstanceCount(): Int = when {
     cardID == Shockwave.ID -> 2

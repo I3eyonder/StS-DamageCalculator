@@ -24,6 +24,7 @@ import com.megacrit.cardcrawl.orbs.Frost
 import com.megacrit.cardcrawl.powers.*
 import com.megacrit.cardcrawl.powers.watcher.BlockReturnPower
 import com.megacrit.cardcrawl.powers.watcher.LikeWaterPower
+import com.megacrit.cardcrawl.powers.watcher.MentalFortressPower
 import com.megacrit.cardcrawl.powers.watcher.NirvanaPower
 import com.megacrit.cardcrawl.relics.*
 import com.megacrit.cardcrawl.stances.CalmStance
@@ -196,6 +197,11 @@ object PlayerRenderer {
         AbstractDungeon.player.getPower(NirvanaPower.POWER_ID)?.let { nirvanaPower ->
             if (isScryCard) {
                 add(Action.GainBlock(nirvanaPower.amount, AbstractDungeon.player))
+            }
+        }
+        AbstractDungeon.player.getPower(MentalFortressPower.POWER_ID)?.let { mentalFortressPower ->
+            if (causeSwitchStance()) {
+                add(Action.GainBlock(mentalFortressPower.amount, AbstractDungeon.player))
             }
         }
 
