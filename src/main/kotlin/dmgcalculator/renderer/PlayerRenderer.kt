@@ -454,6 +454,17 @@ object PlayerRenderer {
         // Resolve monster attack intent
         val monsterAttackIntentActions = AbstractDungeon.getMonsters().aliveMonsters.getAttackIntentActions()
 
+        // Resolve monster power damage intent
+        val monsterPowerActions = buildList {
+            AbstractDungeon.getMonsters().aliveMonsters.forEach { monster ->
+                monster.getPower(ExplosivePower.POWER_ID)?.let { explosivesPower ->
+                    if (explosivesPower.amount == 1 && !monster.isDying) {
+                        addToBottom(Action.DamageThorns(30))
+                    }
+                }
+            }
+        }
+
         // Resolve start of next turn actions
         val startOfNextTurnActions = buildList {
             if (player.hasPower(PoisonPower.POWER_ID)) {
@@ -469,7 +480,7 @@ object PlayerRenderer {
 
         return (relicEffect + powerPreHandEffects + handDamageActions +
                 orbsActions + powerAfterHandEffects + monsterAttackIntentActions +
-                startOfNextTurnActions + pendingActions).flatten()
+                monsterPowerActions + startOfNextTurnActions + pendingActions).flatten()
     }
 
 }
