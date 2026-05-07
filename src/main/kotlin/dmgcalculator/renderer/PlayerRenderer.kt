@@ -128,6 +128,7 @@ object PlayerRenderer {
     }
 
     private fun AbstractCard.createIntentActions(): List<Action> = buildList {
+        val aliveMonsters = AbstractDungeon.getMonsters().aliveMonsters
         repeat(getActionHitCount()) {
             var blockAmount = block
             var baseBlockAmount = baseBlock
@@ -141,8 +142,8 @@ object PlayerRenderer {
             if (cardID == Halt.ID && AbstractDungeon.player.stance.ID == WrathStance.STANCE_ID) {
                 add(Action.GainBlock(magicNumber, AbstractDungeon.player))
             }
-            val targetingMonsters = if (isDamageAllEnemiesCard) {
-                AbstractDungeon.getMonsters().aliveMonsters
+            val targetingMonsters = if (isDamageAllEnemiesCard || aliveMonsters.size == 1) {
+                aliveMonsters
             } else {
                 listOfNotNull(AbstractDungeon.player.getHoveredMonster())
             }
@@ -165,7 +166,7 @@ object PlayerRenderer {
             add(Action.GainBlock(AbstractDungeon.player.currentBlock, AbstractDungeon.player))
         }
 
-        AbstractDungeon.getMonsters().aliveMonsters.forEach { monster ->
+        aliveMonsters.forEach { monster ->
             monster.getPower(SharpHidePower.POWER_ID)?.let { sharpHidePower ->
                 if (type == CardType.ATTACK) {
                     add(
