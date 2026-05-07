@@ -1,6 +1,7 @@
 package dmgcalculator.renderer
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
+import com.badlogic.gdx.math.MathUtils
 import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.AbstractCard.CardType
 import com.megacrit.cardcrawl.cards.colorless.BandageUp
@@ -209,7 +210,12 @@ object PlayerRenderer {
         // Healing or Losing HP effects
         when (cardID) {
             BandageUp.ID, Bite.ID -> {
-                add(Action.GainHP(magicNumber, AbstractDungeon.player))
+                add(
+                    Action.GainHP(
+                        AbstractDungeon.player.getHealAmount(magicNumber),
+                        AbstractDungeon.player
+                    ),
+                )
             }
 
             Offering.ID -> {
@@ -240,7 +246,12 @@ object PlayerRenderer {
 
         // Apply BirdFacedUrn relic if needed
         if (type == CardType.POWER && AbstractDungeon.player.hasRelic(BirdFacedUrn.ID)) {
-            add(Action.GainHP(2, AbstractDungeon.player))
+            add(
+                Action.GainHP(
+                    AbstractDungeon.player.getHealAmount(2),
+                    AbstractDungeon.player,
+                )
+            )
         }
 
         // Evoke orbs if needed
@@ -446,8 +457,16 @@ object PlayerRenderer {
                         addToBottom(Action.LoseHP(it, player))
                     }
 
-                    RegenerateMonsterPower.POWER_ID -> addToBottom(Action.GainHP(power.amount, player))
-                    RegenPower.POWER_ID -> addToTop(Action.GainHP(power.amount, player))
+                    RegenerateMonsterPower.POWER_ID,
+                    RegenPower.POWER_ID,
+                        -> {
+                        addToTop(
+                            Action.GainHP(
+                                player.getHealAmount(power.amount),
+                                player,
+                            )
+                        )
+                    }
                 }
             }
         }

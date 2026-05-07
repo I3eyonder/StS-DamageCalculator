@@ -1,11 +1,13 @@
 package dmgcalculator.util
 
+import com.badlogic.gdx.math.MathUtils
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.core.AbstractCreature
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
 import com.megacrit.cardcrawl.monsters.AbstractMonster
 import com.megacrit.cardcrawl.monsters.MonsterGroup
 import com.megacrit.cardcrawl.powers.AbstractPower
+import com.megacrit.cardcrawl.relics.MagicFlower
 import dmgcalculator.entities.Action
 import dmgcalculator.util.Utils.isAttackingIntent
 
@@ -55,6 +57,12 @@ val List<AbstractMonster>.aliveMonsterNumber: Int
 
 fun AbstractPlayer.getHoveredMonster(): AbstractMonster? {
     return getPrivateField("hoveredMonster")
+}
+
+fun AbstractPlayer.getHealAmount(baseAmount: Int): Int = if (hasRelic(MagicFlower.ID)) {
+    MathUtils.round(baseAmount * 1.5f)
+} else {
+    baseAmount
 }
 
 fun <T> AbstractCreature.temporaryRemoveAmountFromPowers(
