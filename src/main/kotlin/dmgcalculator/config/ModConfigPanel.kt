@@ -19,6 +19,7 @@ object ModConfigPanel {
 
     private const val SHOW_BLOCK_INFO_KEY = "SHOW_BLOCK_INFO_KEY"
     private const val CALCULATE_PLAYER_THORNS_DAMAGE = "CALCULATE_PLAYER_THORNS_DAMAGE"
+    private const val IGNORE_RUNIC_DOME_RELIC = "IGNORE_RUNIC_DOME_RELIC"
 
     private lateinit var config: SpireConfig
 
@@ -26,8 +27,10 @@ object ModConfigPanel {
         setupConfig()
         ModConfig.showBlockInfo = config.getBool(SHOW_BLOCK_INFO_KEY)
         ModConfig.calculatePlayerThornsDamage = config.getBool(CALCULATE_PLAYER_THORNS_DAMAGE)
+        ModConfig.ignoreRunicDomeRelic = config.getBool(IGNORE_RUNIC_DOME_RELIC)
         return ModPanel().apply {
             addUIElement(createToggleBlockInfoButton(this))
+            addUIElement(createToggleIgnoreRunicDomeRelicButton(this))
 //            addUIElement(createToggleCalculatePlayerThornsDamageButton(this))
         }
     }
@@ -36,6 +39,7 @@ object ModConfigPanel {
         val defaults = Properties().apply {
             setProperty(SHOW_BLOCK_INFO_KEY, "true")
             setProperty(CALCULATE_PLAYER_THORNS_DAMAGE, "true")
+            setProperty(IGNORE_RUNIC_DOME_RELIC, "false")
         }
         try {
             config = SpireConfig("DmgCalculator", "config", defaults).apply {
@@ -57,10 +61,22 @@ object ModConfigPanel {
             saveConfig()
         })
 
+    private fun createToggleIgnoreRunicDomeRelicButton(panel: ModPanel): ModLabeledToggleButton =
+        ModLabeledToggleButton(
+            "Ignore Runic Dome Relic.",
+            400.0f, 650.0f, Settings.CREAM_COLOR, FontHelper.charDescFont,
+            ModConfig.ignoreRunicDomeRelic, panel,
+            { label: ModLabel -> },
+            { button: ModToggleButton ->
+                ModConfig.ignoreRunicDomeRelic = button.enabled
+                config.setBool(IGNORE_RUNIC_DOME_RELIC, button.enabled)
+                saveConfig()
+            })
+
     private fun createToggleCalculatePlayerThornsDamageButton(panel: ModPanel): ModLabeledToggleButton =
         ModLabeledToggleButton(
             "Calculate player thorns damage.",
-            400.0f, 650.0f, Settings.CREAM_COLOR, FontHelper.charDescFont,
+            400.0f, 700.0f, Settings.CREAM_COLOR, FontHelper.charDescFont,
             ModConfig.calculatePlayerThornsDamage, panel,
             { label: ModLabel -> },
             { button: ModToggleButton ->

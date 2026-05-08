@@ -1,7 +1,6 @@
 package dmgcalculator.renderer
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.math.MathUtils
 import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.AbstractCard.CardType
 import com.megacrit.cardcrawl.cards.colorless.BandageUp
@@ -30,6 +29,7 @@ import com.megacrit.cardcrawl.powers.watcher.NirvanaPower
 import com.megacrit.cardcrawl.relics.*
 import com.megacrit.cardcrawl.stances.CalmStance
 import com.megacrit.cardcrawl.stances.WrathStance
+import dmgcalculator.config.ModConfig
 import dmgcalculator.entities.*
 import dmgcalculator.util.*
 import dmgcalculator.util.Utils.addDuplicationCardActionIfNeeded
@@ -47,13 +47,29 @@ object PlayerRenderer {
 
     fun render(sb: SpriteBatch, hoveredCard: AbstractCard?, isPlayerTurn: Boolean) {
         this.isPlayerTurn = isPlayerTurn
-        val msg = if (isPlayerTurn) {
-            cachedMsg = ""
-            createRenderMessage(hoveredCard)
-        } else cachedMsg.ifEmpty {
-            createRenderMessage().also {
-                cachedMsg = it.ifEmpty {
-                    " "
+        val msg = when {
+            AbstractDungeon.player.hasRelic(RunicDome.ID) && !ModConfig.ignoreRunicDomeRelic -> {
+                buildString {
+                    append("Hidden by")
+                    appendLine()
+                    append("Runic Dome".colored("#00FF00"))
+                    appendLine()
+                    append("----".colored("#FCBA03"))
+                    appendLine()
+                    append("Can be changed")
+                    appendLine()
+                    append("in the config panel")
+                }
+            }
+            isPlayerTurn -> {
+                cachedMsg = ""
+                createRenderMessage(hoveredCard)
+            }
+            else -> cachedMsg.ifEmpty {
+                createRenderMessage().also {
+                    cachedMsg = it.ifEmpty {
+                        " "
+                    }
                 }
             }
         }

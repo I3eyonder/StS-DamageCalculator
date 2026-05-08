@@ -119,6 +119,10 @@ The mod provides a configuration panel accessible through ModTheSpire's mod sett
   - When enabled, displays block calculations
   - When disabled, hides the block information
 
+- **Ignore Runic Dome Relic**: Toggle to ignore the Runic Dome relic effects (default: disabled)
+  - When enabled, player damage calculations will be calculated even if they have Runic Dome relic
+  - When disabled, player damage calculations will not be calculated if they have Runic Dome relic
+
 ## License
 
 This project is licensed under the Apache License 2.0. See the LICENSE file for details.

@@ -10,5 +10,8 @@ object ModConfig {
 
     var calculatePlayerThornsDamage = true
         internal set
+
+    var ignoreRunicDomeRelic = false
+        internal set
 }
 
