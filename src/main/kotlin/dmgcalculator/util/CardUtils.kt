@@ -35,25 +35,6 @@ private val randomAttackCards = setOf(
     ThunderStrike.ID,
 )
 
-private val damageAllEnemiesCards = setOf(
-    Cleave.ID,
-    ThunderClap.ID,
-    Whirlwind.ID,
-    Immolate.ID,
-    Reaper.ID,
-    DaggerSpray.ID,
-    AllOutAttack.ID,
-    DieDieDie.ID,
-    GrandFinale.ID,
-    SweepingBeam.ID,
-    Blizzard.ID,
-    DoomAndGloom.ID,
-    Hyperbeam.ID,
-    Consecrate.ID,
-    Conclude.ID,
-    DramaticEntrance.ID,
-)
-
 private val giveVulnerableCards = setOf(
     Bash.ID,
     ThunderClap.ID,
@@ -151,9 +132,6 @@ val AbstractCard.isOrbEvokeCard: Boolean
 
 val AbstractCard.isRandomAttackCard: Boolean
     get() = randomAttackCards.contains(cardID)
-
-val AbstractCard.isDamageAllEnemiesCard: Boolean
-    get() = damageAllEnemiesCards.contains(cardID)
 
 val AbstractCard.canGiveVulnerable: Boolean
     get() = giveVulnerableCards.contains(cardID)

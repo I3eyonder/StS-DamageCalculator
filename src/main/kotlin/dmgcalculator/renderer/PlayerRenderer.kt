@@ -13,9 +13,11 @@ import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.purple.Halt
 import com.megacrit.cardcrawl.cards.purple.SpiritShield
 import com.megacrit.cardcrawl.cards.red.Bloodletting
+import com.megacrit.cardcrawl.cards.red.Defend_Red
 import com.megacrit.cardcrawl.cards.red.Entrench
 import com.megacrit.cardcrawl.cards.red.Hemokinesis
 import com.megacrit.cardcrawl.cards.red.Offering
+import com.megacrit.cardcrawl.cards.red.Strike_Red
 import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
@@ -143,10 +145,16 @@ object PlayerRenderer {
             if (cardID == Halt.ID && AbstractDungeon.player.stance.ID == WrathStance.STANCE_ID) {
                 add(Action.GainBlock(magicNumber, AbstractDungeon.player))
             }
-            val targetingMonsters = if (isDamageAllEnemiesCard || aliveMonsters.size == 1) {
-                aliveMonsters
-            } else {
-                listOfNotNull(AbstractDungeon.player.getHoveredMonster())
+            val targetingMonsters = when {
+                target == AbstractCard.CardTarget.ALL_ENEMY -> {
+                    aliveMonsters
+                }
+                aliveMonsters.size == 1 && target == AbstractCard.CardTarget.ENEMY -> {
+                    aliveMonsters
+                }
+                else -> {
+                    listOfNotNull(AbstractDungeon.player.getHoveredMonster())
+                }
             }
             targetingMonsters.forEach { targetingMonster ->
                 targetingMonster.getPower(BlockReturnPower.POWER_ID)?.let { blockReturnPower ->
