@@ -3,6 +3,7 @@ package dmgcalculator.renderer
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.AbstractCard.CardType
+import com.megacrit.cardcrawl.cards.blue.AutoShields
 import com.megacrit.cardcrawl.cards.colorless.BandageUp
 import com.megacrit.cardcrawl.cards.colorless.Bite
 import com.megacrit.cardcrawl.cards.colorless.JAX
@@ -137,7 +138,17 @@ object PlayerRenderer {
                 baseBlockAmount -= magicNumber
             }
             if (blockAmount > 0 && baseBlockAmount >= 0 && !isFakeGainBlockCard) {
-                add(Action.GainBlock(blockAmount, AbstractDungeon.player))
+                when (cardID) {
+                    AutoShields.ID -> {
+                        if (AbstractDungeon.player.currentBlock == 0) {
+                            add(Action.GainBlock(blockAmount, AbstractDungeon.player))
+                        }
+                    }
+
+                    else -> {
+                        add(Action.GainBlock(blockAmount, AbstractDungeon.player))
+                    }
+                }
             }
             if (cardID == Halt.ID && AbstractDungeon.player.stance.ID == WrathStance.STANCE_ID) {
                 add(Action.GainBlock(magicNumber, AbstractDungeon.player))
