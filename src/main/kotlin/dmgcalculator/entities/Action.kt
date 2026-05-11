@@ -2,7 +2,12 @@ package dmgcalculator.entities
 
 import com.megacrit.cardcrawl.core.AbstractCreature
 
-sealed class Action(open val min: Int, open val max: Int, open val target: ActionTarget) {
+sealed class Action(
+    open val min: Int,
+    open val max: Int,
+    open val target: ActionTarget,
+    open val triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+) {
 
     private val _tags = mutableSetOf<ActionTag>()
 
@@ -40,10 +45,26 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
         override val min: Int,
         override val max: Int,
         override val target: ActionTarget,
-    ) : Action(min, max, target) {
-        constructor(min: Int, max: Int, target: AbstractCreature) : this(min, max, ActionTarget.Single(target))
-        constructor(value: Int, target: ActionTarget = ActionTarget.None) : this(value, value, target)
-        constructor(value: Int, target: AbstractCreature) : this(value, value, ActionTarget.Single(target))
+        override val triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+    ) : Action(min, max, target, triggerCondition) {
+        constructor(
+            min: Int,
+            max: Int,
+            target: AbstractCreature,
+            triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+        ) : this(min, max, ActionTarget.Single(target), triggerCondition)
+
+        constructor(
+            value: Int,
+            target: ActionTarget = ActionTarget.None,
+            triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+        ) : this(value, value, target, triggerCondition)
+
+        constructor(
+            value: Int,
+            target: AbstractCreature,
+            triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+        ) : this(value, value, ActionTarget.Single(target), triggerCondition)
 
         override fun makeCopyWithoutTags(): Action = copy()
     }
@@ -52,8 +73,13 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
         override val min: Int,
         override val max: Int,
         override val target: ActionTarget = ActionTarget.All,
-    ) : Action(min, max, target) {
-        constructor(value: Int, target: ActionTarget = ActionTarget.All) : this(value, value, target)
+        override val triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+    ) : Action(min, max, target, triggerCondition) {
+        constructor(
+            value: Int,
+            target: ActionTarget = ActionTarget.All,
+            triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+        ) : this(value, value, target, triggerCondition)
 
         override fun makeCopyWithoutTags(): Action = copy()
     }
@@ -62,13 +88,19 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
         override val min: Int,
         override val max: Int,
         override val target: ActionTarget,
-    ) : Action(min, max, target) {
-        constructor(value: Int, target: ActionTarget) : this(value, value, target)
-        constructor(value: Int, target: AbstractCreature, filterable: Boolean = false) : this(
-            value,
-            value,
-            ActionTarget.Single(target, filterable),
-        )
+        override val triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+    ) : Action(min, max, target, triggerCondition) {
+        constructor(
+            value: Int,
+            target: ActionTarget,
+            triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+        ) : this(value, value, target, triggerCondition)
+
+        constructor(
+            value: Int,
+            target: AbstractCreature, filterable: Boolean = false,
+            triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+        ) : this(value, value, ActionTarget.Single(target, filterable), triggerCondition)
 
         override fun makeCopyWithoutTags(): Action = copy()
     }
@@ -76,8 +108,13 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
     data class GainHP(
         val value: Int,
         override val target: ActionTarget,
-    ) : Action(value, value, target) {
-        constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, false))
+        override val triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+    ) : Action(value, value, target, triggerCondition) {
+        constructor(
+            value: Int,
+            target: AbstractCreature,
+            triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+        ) : this(value, ActionTarget.Single(target, false), triggerCondition)
 
         override fun makeCopyWithoutTags(): Action = copy()
     }
@@ -85,8 +122,13 @@ sealed class Action(open val min: Int, open val max: Int, open val target: Actio
     data class GainBlock(
         val value: Int,
         override val target: ActionTarget,
-    ) : Action(value, value, target) {
-        constructor(value: Int, target: AbstractCreature) : this(value, ActionTarget.Single(target, false))
+        override val triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+    ) : Action(value, value, target, triggerCondition) {
+        constructor(
+            value: Int,
+            target: AbstractCreature,
+            triggerCondition: (CreatureInfo<AbstractCreature>) -> Boolean = { true },
+        ) : this(value, ActionTarget.Single(target, false), triggerCondition)
 
         override fun makeCopyWithoutTags(): Action = copy()
     }
