@@ -59,27 +59,30 @@ object Utils {
     }
 
     fun MutableList<Action>.addDuplicationCardActionIfNeeded(
-        card: AbstractCard,
+        baseCard: AbstractCard,
         cardActionBuilder: AbstractCard.() -> Action,
     ) {
+        val duplicationCard = baseCard.makeSameInstanceOf().apply {
+            purgeOnUse = true
+        }
         // Apply Duplication power if needed
         AbstractDungeon.player.powers.forEach { power ->
             when (power.ID) {
                 DoubleTapPower.POWER_ID -> {
-                    if (card.type == CardType.ATTACK && power.amount > 0) {
-                        add(card.cardActionBuilder())
+                    if (duplicationCard.type == CardType.ATTACK && power.amount > 0) {
+                        add(duplicationCard.cardActionBuilder())
                     }
                 }
 
                 DuplicationPower.POWER_ID -> {
                     if (power.amount > 0) {
-                        add(card.cardActionBuilder())
+                        add(duplicationCard.cardActionBuilder())
                     }
                 }
 
                 BurstPower.POWER_ID -> {
-                    if (card.type == CardType.SKILL && power.amount > 0) {
-                        add(card.cardActionBuilder())
+                    if (duplicationCard.type == CardType.SKILL && power.amount > 0) {
+                        add(duplicationCard.cardActionBuilder())
                     }
                 }
 
@@ -88,7 +91,7 @@ object Utils {
                     if (power.amount > 0 &&
                         AbstractDungeon.actionManager.cardsPlayedThisTurn.size + 1 - cardsDoubledThisTurn <= power.amount
                     ) {
-                        add(card.cardActionBuilder())
+                        add(duplicationCard.cardActionBuilder())
                     }
                 }
             }
@@ -96,11 +99,11 @@ object Utils {
 
         // Apply Necronomicon relic if needed
         AbstractDungeon.player.getRelic(Necronomicon.ID)?.let { necronomiconRelic ->
-            if (card.type == CardType.ATTACK &&
-                (card.costForTurn >= 2 && !card.freeToPlayOnce || card.cost == -1 && card.energyOnUse >= 2) &&
+            if (duplicationCard.type == CardType.ATTACK &&
+                (duplicationCard.costForTurn >= 2 && !duplicationCard.freeToPlayOnce || duplicationCard.cost == -1 && duplicationCard.energyOnUse >= 2) &&
                 necronomiconRelic.checkTrigger()
             ) {
-                add(card.cardActionBuilder())
+                add(duplicationCard.cardActionBuilder())
             }
         }
     }

@@ -140,7 +140,7 @@ object PlayerRenderer {
             if (blockAmount > 0 && baseBlockAmount >= 0 && !isFakeGainBlockCard) {
                 when (cardID) {
                     AutoShields.ID -> {
-                        if (AbstractDungeon.player.currentBlock == 0) {
+                        if (AbstractDungeon.player.currentBlock == 0 && !purgeOnUse) {
                             add(Action.GainBlock(blockAmount, AbstractDungeon.player))
                         }
                     }
@@ -157,24 +157,32 @@ object PlayerRenderer {
                 target == AbstractCard.CardTarget.ALL_ENEMY -> {
                     aliveMonsters
                 }
+
                 aliveMonsters.size == 1 && target == AbstractCard.CardTarget.ENEMY -> {
                     aliveMonsters
                 }
+
                 else -> {
                     listOfNotNull(AbstractDungeon.player.getHoveredMonster())
                 }
             }
             targetingMonsters.forEach { targetingMonster ->
-                targetingMonster.getPower(BlockReturnPower.POWER_ID)?.let { blockReturnPower ->
-                    add(Action.GainBlock(blockReturnPower.amount, AbstractDungeon.player))
-                }
-                targetingMonster.getPower(ThornsPower.POWER_ID)?.let { thornsPower ->
-                    add(
-                        Action.DamageThorns(
-                            thornsPower.amount,
-                            ActionTarget.Single(AbstractDungeon.player, false),
-                        )
-                    )
+                targetingMonster.powers.forEach { power ->
+                    if (power.ID == BlockReturnPower.POWER_ID) {
+                        if (baseDamage >= 0) {
+                            addToTop(Action.GainBlock(power.amount, AbstractDungeon.player))
+                        }
+                    }
+                    if (power.ID == ThornsPower.POWER_ID) {
+                        if (baseDamage >= 0) {
+                            addToTop(
+                                Action.DamageThorns(
+                                    power.amount,
+                                    ActionTarget.Single(AbstractDungeon.player, false),
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
