@@ -1,7 +1,6 @@
 package dmgcalculator.renderer
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.math.MathUtils
 import com.megacrit.cardcrawl.cards.AbstractCard
 import com.megacrit.cardcrawl.cards.AbstractCard.CardType
 import com.megacrit.cardcrawl.cards.colorless.BandageUp
@@ -13,11 +12,9 @@ import com.megacrit.cardcrawl.cards.curses.Regret
 import com.megacrit.cardcrawl.cards.purple.Halt
 import com.megacrit.cardcrawl.cards.purple.SpiritShield
 import com.megacrit.cardcrawl.cards.red.Bloodletting
-import com.megacrit.cardcrawl.cards.red.Defend_Red
 import com.megacrit.cardcrawl.cards.red.Entrench
 import com.megacrit.cardcrawl.cards.red.Hemokinesis
 import com.megacrit.cardcrawl.cards.red.Offering
-import com.megacrit.cardcrawl.cards.red.Strike_Red
 import com.megacrit.cardcrawl.cards.status.Burn
 import com.megacrit.cardcrawl.characters.AbstractPlayer
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon
@@ -411,17 +408,6 @@ object PlayerRenderer {
             }
         }
 
-        // Resolve hand intent actions
-        val handDamageActions = buildList {
-            remainingHandCards.forEach { card ->
-                when (card.cardID) {
-                    Burn.ID -> addToBottom(Action.DamageThorns(card.magicNumber))
-                    Decay.ID -> addToBottom(Action.DamageThorns(2))
-                    Regret.ID -> addToBottom(Action.LoseHP(remainingHandCards.size, player))
-                }
-            }
-        }
-
         // Resolve orbs actions
         val orbsActions = buildList {
             val accumulateOrbs = creatureInfo.creature.orbs
@@ -454,6 +440,17 @@ object PlayerRenderer {
                         addOrbAction(retainOrb, false)
                     }
                 }
+        }
+
+        // Resolve hand intent actions
+        val handDamageActions = buildList {
+            remainingHandCards.forEach { card ->
+                when (card.cardID) {
+                    Burn.ID -> addToBottom(Action.DamageThorns(card.magicNumber))
+                    Decay.ID -> addToBottom(Action.DamageThorns(2))
+                    Regret.ID -> addToBottom(Action.LoseHP(remainingHandCards.size, player))
+                }
+            }
         }
 
         // Resolve power effects after hand
@@ -506,8 +503,8 @@ object PlayerRenderer {
             creatureInfo.pendingActions.clear()
         }
 
-        return (relicEffect + powerPreHandEffects + handDamageActions +
-                orbsActions + powerAfterHandEffects + monsterAttackIntentActions +
+        return (relicEffect + powerPreHandEffects + orbsActions +
+                handDamageActions + powerAfterHandEffects + monsterAttackIntentActions +
                 monsterPowerActions + startOfNextTurnActions + pendingActions).flatten()
     }
 
